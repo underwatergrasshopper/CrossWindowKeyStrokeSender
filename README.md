@@ -14,7 +14,7 @@ Language: C++11
 ## Usage Examples
 
 ### Example 1
-Sends three chains of messages to empty notepad window. Sended text is encoded in UTF16 and each message in chain have 5 second delay.
+Sends three chains of text messages to empty notepad window. Sended text is encoded in UTF16 and each message in chain have 5 seconds delay.
 ```c++
 using namespace CWKSS;
 
@@ -31,7 +31,7 @@ puts(result.GetErrorMessageUTF8().c_str());
 ```
 
 ### Example 2
-Sends command `/kills` to "Path of Exile"'s game window.
+Sends `/kills` command to "Path of Exile"'s game window.
 ```c++
 using namespace CWKSS;
 
