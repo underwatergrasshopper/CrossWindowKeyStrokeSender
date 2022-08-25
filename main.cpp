@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////
+﻿////////////////////////////////////////////////////////////////////////////////
 // MIT License
 // 
 // Copyright (c) 2022 underwatergrasshopper
@@ -23,8 +23,95 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
+#include <assert.h>
+
+#include "CrossWindowKeyStrokeSender.h"
+
+void RunTests() {
+    using namespace CWKSS;
+
+    // --- UTF16_ToUTF8 and UTF8_ToUTF16 --- //
+    assert(UTF16_ToUTF8(L"abc") == "abc");
+    assert(UTF8_ToUTF16("abc") == L"abc");
+
+    assert(UTF16_ToUTF8(L"śćń") == u8"śćń");
+    assert(UTF8_ToUTF16(u8"śćń") == L"śćń");
+
+    Result result;
+
+    // TODO: Test sending message where a caller window is the target window.
+#if 0
+    Sleep(1000);
+    Message messages[] = { Text("notepad"), Key(VK_RETURN) };
+
+    HWND target_window = GetForegroundWindow();
+    dbg_cwkss_print_int(target_window);
+
+    if (target_window) {
+        result = SendToWindow(target_window, messages, 2, EncodingMode::UTF8, 1);
+        puts(result.GetErrorMessageUTF8().c_str());
+    } else {
+        puts("Foreground window can not be found.");
+    }
+#endif
+
+#if 0
+    result = SendToWindow(L"Untitled - Notepad", { Text(L"śćńó"), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
+    puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(L"Untitled - Notepad", { Text(L"Some not long text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
+    puts(result.GetErrorMessageUTF8().c_str());
+
+    result = SendToWindow(L"*Untitled - Notepad", { Text(L"Some a litle longer text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
+    puts(result.GetErrorMessageUTF8().c_str());
+
+    result = SendToWindow(L"*Untitled - Notepad", { Text(L"And another text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
+    puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("*Untitled - Notepad", { Key(VK_RETURN), Text("Some not long text."), Key(VK_RETURN) }, EncodingMode::UTF16, 1);
+    puts(result.GetErrorMessageUTF8().c_str());
+
+    result = SendToWindow(L"*Untitled - Notepad", { Key(VK_RETURN), Text(L"Some a litle longer text."), Key(VK_RETURN) }, EncodingMode::UTF8, 1);
+    puts(result.GetErrorMessageUTF8().c_str());
+
+    result = SendToWindow(L"*Untitled - Notepad", { Key(VK_RETURN), Text(L"And another text."), Key(VK_RETURN) }, EncodingMode::UTF8, 10);
+    puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+    if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(L"Path of Exile", { Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN)  }, EncodingMode::UTF16, 1);
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  }, EncodingMode::UTF8, 1);
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("Path of Exile", { Key(VK_RETURN, KeyState::DOWN), Key(VK_RETURN, KeyState::UP), Text("/kills"), Key(VK_RETURN, KeyState::DOWN), Key(VK_RETURN, KeyState::UP) }, EncodingMode::UTF16, 1);
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  }, EncodingMode::UTF16, 1);
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+}
 
 int main() {
     puts("hello");
+
+    RunTests();
     return 0;
 }
