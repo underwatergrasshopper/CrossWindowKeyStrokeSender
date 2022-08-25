@@ -4,7 +4,7 @@ Simple library for sending keyboard messages to window application from other wi
 To be able use library, copy `CrossWindowKeyStrokeSender.h` file to project source folder.
 
 It's designed for short messages, which have no more than 1000 character, like sending some chat command to a video game. 
-If sent message seems crangled when arrived to target window, try using bigger `delay` in `SendToWindow` function.
+If sent message seems crangled when arrives to target window, try using bigger `delay` in `SendToWindow` function.
 
 ## Build Info
 Compiled on: Visual Studio 2022
