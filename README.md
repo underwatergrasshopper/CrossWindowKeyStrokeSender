@@ -1,7 +1,7 @@
 # CrossWindowKeyStrokeSender
 Simple library for sending keyboard messages to window application from other window application or console application.
 
-To be able use library, copy 'CrossWindowKeyStrokeSender.h' to project source folder.
+To be able use library, copy `CrossWindowKeyStrokeSender.h` file to project source folder.
 
 It's designed for short messages, which have no more than 1000 character, like sending some chat command to a video game. 
 If sent message seems crangled when arrived to target window, try using bigger `delay` in `SendToWindow` function.
