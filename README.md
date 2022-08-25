@@ -21,13 +21,13 @@ using namespace CWKSS;
 Result result;
 
 result = SendToWindow(L"Untitled - Notepad", { Text(L"Some not long text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
-puts(result.GetErrorMessageUTF8().c_str());
+if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 
 result = SendToWindow(L"*Untitled - Notepad", { Text(L"Some a litle longer text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
-puts(result.GetErrorMessageUTF8().c_str());
+if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 
 result = SendToWindow(L"*Untitled - Notepad", { Text(L"And another text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
-puts(result.GetErrorMessageUTF8().c_str());
+if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 ```
 
 ### Example 2
