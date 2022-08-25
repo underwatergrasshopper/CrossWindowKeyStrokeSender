@@ -7,9 +7,9 @@ It's designed for short messages, which have no more than 1000 character, like s
 If sent message seems crangled when arrives to target window, try using bigger `delay` in `SendToWindow` function.
 
 ## Build Info
-Compiled on: Visual Studio 2022
-Target paltform: Windows 7/8/10 (32bit and 64bit)
-Language: C++11
+- Compiled on: Visual Studio 2022
+- Target paltform: Windows 7/8/10 (32bit and 64bit)
+- Language: C++11
 
 ## Usage Examples
 
