@@ -30,12 +30,44 @@
 void RunTests() {
     using namespace CWKSS;
 
-    // --- UTF16_ToUTF8 and UTF8_ToUTF16 --- //
+    // --- UTF16_ToUTF8 and UTF8_ToUTF16 tests --- //
     assert(UTF16_ToUTF8(L"abc") == "abc");
     assert(UTF8_ToUTF16("abc") == L"abc");
 
     assert(UTF16_ToUTF8(L"śćń") == u8"śćń");
     assert(UTF8_ToUTF16(u8"śćń") == L"śćń");
+
+    // --- Result tests --- //
+    assert(Result(ErrorID::NONE, "abc", false).GetErrorMessageUTF8() == "CWKSS Error: abc");
+    assert(Result(ErrorID::NONE, "abc", false).GetErrorMessageUTF16() == L"CWKSS Error: abc");
+
+    assert(Result(ErrorID::NONE, u8"abc śćń", false).GetErrorMessageUTF8() == u8"CWKSS Error: abc śćń");
+    assert(Result(ErrorID::NONE, u8"abc śćń", false).GetErrorMessageUTF16() == L"CWKSS Error: abc śćń");
+
+    assert(Result(ErrorID::NONE, L"abc śćń", false).GetErrorMessageUTF8() == u8"CWKSS Error: abc śćń");
+    assert(Result(ErrorID::NONE, L"abc śćń", false).GetErrorMessageUTF16() == L"CWKSS Error: abc śćń");
+
+    DWORD last_error = GetLastError();
+
+    assert(Result(ErrorID::NONE, "abc", true).GetErrorMessageUTF8() == "CWKSS Error: abc (windows error code: " + std::to_string(last_error) + ")");
+    assert(Result(ErrorID::NONE, "abc", true).GetErrorMessageUTF16() == L"CWKSS Error: abc (windows error code: " + std::to_wstring(last_error) + L")");
+
+    // --- Wait tests --- //
+#if 0
+    Wait(1);
+#endif
+#if 0
+    Wait(1000);
+#endif
+#if 0
+    Wait(10000);
+#endif
+
+    // --- random tests --- //
+#if 0
+
+#endif
+    // --- SendToWindow test scenarios --- //
 
     Result result;
 
@@ -110,8 +142,6 @@ void RunTests() {
 }
 
 int main() {
-    puts("hello");
-
     RunTests();
     return 0;
 }
