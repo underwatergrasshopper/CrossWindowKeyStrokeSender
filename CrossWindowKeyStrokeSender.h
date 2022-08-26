@@ -72,7 +72,7 @@ using TString = std::string;
 #define cwkss_print_u64(val) { printf(#val"=%ulld\n", (long long unsigned)(val)); fflush(stdout); } (void)0
 
 enum {
-    MAX_WAIT_DELAY = 1000 * 60 * 60,    // in miliseconds
+    MAX_WAIT_DELAY = 1000 * 60 * 60,    // in milliseconds
 };
 
 enum KeyState {
@@ -407,7 +407,7 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 // @param encoding_mode         Decides if message will be sended in UTF16 or UTF8 encoding.
 //                              Note: WinApi functions with suffix A are used for UTF8 mode.
 //                              Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                 Delay in miliseconds between sending messages.
+// @param delay                 Delay in milliseconds between sending messages.
 inline Result SendToWindow(HWND target_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
     HWND foreground_window = GetForegroundWindow();
 
@@ -463,7 +463,7 @@ inline Result SendToWindow(HWND target_window, const Message* messages, unsigned
 // @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
 //                                     Note: WinApi functions with suffix A are used for UTF8 mode.
 //                                     Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in miliseconds between sending messages.
+// @param delay                        Delay in milliseconds between sending messages.
 inline Result SendToWindow(const std::wstring& target_window_name, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
     HWND target_window = FindWindowW(NULL, target_window_name.c_str());
 
@@ -480,7 +480,7 @@ inline Result SendToWindow(const std::wstring& target_window_name, const Message
 // @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
 //                                     Note: WinApi functions with suffix A are used for UTF8 mode.
 //                                     Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in miliseconds between sending messages.
+// @param delay                        Delay in milliseconds between sending messages.
 inline Result SendToWindow(const std::string& target_window_name, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
     HWND target_window = FindWindowA(NULL, target_window_name.c_str());
 
@@ -496,7 +496,7 @@ inline Result SendToWindow(const std::string& target_window_name, const Message*
 // @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
 // @param                              Note: WinApi functions with suffix A are used for UTF8 mode.
 // @param                              Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in miliseconds between sending messages.
+// @param delay                        Delay in milliseconds between sending messages.
 template <unsigned COUNT>
 inline Result SendToWindow(const std::wstring& target_window_name, const Message (&messages)[COUNT], EncodingMode encoding_mode = EncodingMode::UTF8, unsigned delay = 1) {
     return SendToWindow(target_window_name, (const Message*)messages, COUNT, encoding_mode, delay);
@@ -507,7 +507,7 @@ inline Result SendToWindow(const std::wstring& target_window_name, const Message
 // @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
 // @param                              Note: WinApi functions with suffix A are used for UTF8 mode.
 // @param                              Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in miliseconds between sending messages.
+// @param delay                        Delay in milliseconds between sending messages.
 template <unsigned COUNT>
 inline Result SendToWindow(const std::string& target_window_name, const Message (&messages)[COUNT], EncodingMode encoding_mode = EncodingMode::UTF8, unsigned delay = 1) {
     return SendToWindow(target_window_name, (const Message*)messages, COUNT, encoding_mode, delay);
