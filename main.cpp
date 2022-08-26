@@ -115,7 +115,7 @@ void RunTests() {
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) }, EncodingMode::UTF8, 10);
     if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
@@ -130,7 +130,7 @@ void RunTests() {
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Key(VK_RETURN, KeyState::DOWN), Key(VK_RETURN, KeyState::UP), Text("/kills"), Key(VK_RETURN, KeyState::DOWN), Key(VK_RETURN, KeyState::UP) }, EncodingMode::UTF16, 1);
+    result = SendToWindow("Path of Exile", { Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP), Text("/kills"), Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP) }, EncodingMode::UTF16, 10);
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 #endif
 

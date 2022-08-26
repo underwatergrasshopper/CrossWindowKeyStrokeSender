@@ -75,7 +75,7 @@ enum {
     MAX_WAIT_TIME = 1000 * 60 * 60,    // in milliseconds
 };
 
-enum KeyState {
+enum KeyAction {
     DOWN        = 0x01,
     UP          = 0x02,
     DOWN_AND_UP = DOWN | UP,
@@ -117,7 +117,7 @@ struct Message {
     int             type_id;
 
     int             vk_code;        // KEY
-    int             key_state;      // KEY
+    int             key_action;     // KEY
     std::string     text_utf8;      // TEXT
     std::wstring    text_utf16;     // TEXT
 
@@ -257,28 +257,28 @@ private:
 
 inline void PostKey(HWND window, EncodingMode encoding_mode, const Message& message, Result& result) {
     if (encoding_mode == EncodingMode::UTF16) {
-        if (message.key_state & KeyState::DOWN) {
+        if (message.key_action & KeyAction::DOWN) {
             if (!PostMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
                 return;
             }
         }
 
-        if (message.key_state & KeyState::UP) {
+        if (message.key_action & KeyAction::UP) {
             if (!PostMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key up message.", true);
                 return;
             }
         }
     } else {
-        if (message.key_state & KeyState::DOWN) {
+        if (message.key_action & KeyAction::DOWN) {
             if (!PostMessageA(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
                 return;
             }
         }
 
-        if (message.key_state & KeyState::UP) {
+        if (message.key_action & KeyAction::UP) {
             if (!PostMessageA(window, WM_KEYUP, message.vk_code, message.l_param_up)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key up message.", true);
                 return;
@@ -309,11 +309,11 @@ class Key {
 public:
     Key()  : m_message({}) {}
 
-    explicit Key(int vk_code, int key_state = KeyState::DOWN_AND_UP)  : m_message({}) {
+    explicit Key(int vk_code, int key_action = KeyAction::DOWN_AND_UP)  : m_message({}) {
         m_message.type_id       = MessageTypeID::KEY;
 
         m_message.vk_code       = vk_code;
-        m_message.key_state     = key_state;
+        m_message.key_action    = key_action;
 
         m_message.scan_code     = MapVirtualKey(vk_code, MAPVK_VK_TO_VSC);
 
@@ -354,7 +354,7 @@ private:
 inline Result SendMessages(HWND focus_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
     Result result;
 
-    // Static delay to make sure that, target window gose to foreground.
+    // Static delay to make sure that, target window goes to foreground.
     WaitForMS(100); // Pre-Initialize internal performance counters in Wait functions.
 
     for (unsigned ix = 0; ix < count; ix++) {
