@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <time.h>
 
 #include "CrossWindowKeyStrokeSender.h"
 
@@ -60,7 +61,17 @@ void RunTests() {
     WaitForMS(1000);
 #endif
 #if 0
-    WaitForMS(10000);
+    unsigned wait_time = 10000;
+
+    time_t start = time(NULL);
+
+    WaitForMS(wait_time);
+
+    time_t stop = time(NULL);
+    time_t diff = difftime(stop, start);
+    printf("time: %dsec\n", diff);
+
+    assert(unsigned(diff) * 1000 == wait_time);
 #endif
 
     // --- random tests --- //
