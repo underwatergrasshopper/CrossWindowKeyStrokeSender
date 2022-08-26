@@ -54,13 +54,13 @@ void RunTests() {
 
     // --- Wait tests --- //
 #if 0
-    Wait(1);
+    WaitForMS(1);
 #endif
 #if 0
-    Wait(1000);
+    WaitForMS(1000);
 #endif
 #if 0
-    Wait(10000);
+    WaitForMS(10000);
 #endif
 
     // --- random tests --- //

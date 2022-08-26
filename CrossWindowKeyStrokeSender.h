@@ -72,7 +72,7 @@ using TString = std::string;
 #define cwkss_print_u64(val) { printf(#val"=%ulld\n", (long long unsigned)(val)); fflush(stdout); } (void)0
 
 enum {
-    MAX_WAIT_DELAY = 1000 * 60 * 60,    // in milliseconds
+    MAX_WAIT_TIME = 1000 * 60 * 60,    // in milliseconds
 };
 
 enum KeyState {
@@ -126,13 +126,14 @@ struct Message {
     LPARAM          l_param_up;     // KEY
 };
 
-// @param delay     Delay in milliseconds, not bigger than MAX_WAIT_DELAY.
-// @returns         false - if delay is too big, true - otherwise.
-//                  Note: Function might fail and return false even when delay is below MAX_WAIT_DELAY. 
+// Waits for specified amount of time.
+// @param wait_time Time in milliseconds, not bigger than MAX_WAIT_TIME.
+// @returns         false - if wait time is too big (function do not wait for amount of time, returns immediately), true - otherwise.
+//                  Note: Function might fail and return false even when time is below MAX_WAIT_TIME. 
 //                  That means internal performance counter owerflowed. 
 //                  Some tests showed that, system must be running for even 29 years straight, to this be able to happen.
 //                  So this scenario is most unlikely.
-inline bool Wait(unsigned delay) {
+inline bool WaitForMS(unsigned wait_time) {
     // Performance Counter Frequency does not change while system is running, so only need to be loaded once.
     static LARGE_INTEGER s_frequency = []() {
         LARGE_INTEGER frequency;
@@ -143,8 +144,8 @@ inline bool Wait(unsigned delay) {
         return frequency;
     }();
 
-    if (delay > 0) {
-        if (delay > MAX_WAIT_DELAY) return false;
+    if (wait_time > 0) {
+        if (wait_time > MAX_WAIT_TIME) return false;
 
         dbg_cwkss_print_i64(s_frequency.QuadPart);
 
@@ -160,7 +161,7 @@ inline bool Wait(unsigned delay) {
                 return false;
             }
             const int64_t max_delay = (LLONG_MAX - begin.QuadPart * 1000) / s_frequency.QuadPart;
-            if (int64_t(delay) > max_delay) {
+            if (int64_t(wait_time) > max_delay) {
                 return false;
             }
 
@@ -171,11 +172,11 @@ inline bool Wait(unsigned delay) {
                 QueryPerformanceCounter(&end);
 
                 elapsed = (end.QuadPart - begin.QuadPart) * 1000 / s_frequency.QuadPart;
-            } while (elapsed < int64_t(delay));
+            } while (elapsed < int64_t(wait_time));
 
         } else {
             // System does not support Performance Counter. Alternative substitute.
-            Sleep(delay);
+            Sleep(wait_time);
         }
     }
     return true;
@@ -354,7 +355,7 @@ inline Result SendMessages(HWND focus_window, const Message* messages, unsigned 
     Result result;
 
     // Static delay to make sure that, target window gose to foreground.
-    Wait(100); // Pre-Initialize internal performance counters in Wait functions.
+    WaitForMS(100); // Pre-Initialize internal performance counters in Wait functions.
 
     for (unsigned ix = 0; ix < count; ix++) {
         const Message& message = messages[ix];
@@ -371,7 +372,7 @@ inline Result SendMessages(HWND focus_window, const Message* messages, unsigned 
             break;
         }
         }
-        Wait(delay);
+        WaitForMS(delay);
     }
     return result;
 }
@@ -379,7 +380,7 @@ inline Result SendMessages(HWND focus_window, const Message* messages, unsigned 
 inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
     BOOL is_success = SetForegroundWindow(target_window);
 
-    Wait(100);
+    WaitForMS(100);
 
     if (!is_success) return Result(ErrorID::CAN_NOT_SET_TARGET_WINDOW_AS_FOREGROUND, "Can not set target widnow as foreground window.", true);
 
