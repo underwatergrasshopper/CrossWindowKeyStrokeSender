@@ -104,6 +104,11 @@ void RunTests() {
 #endif
 
 #if 0
+    result = SendToWindow(L"Untitled - Notepad", { Text(L"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0"), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
+    puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
+#if 0
     result = SendToWindow(L"Untitled - Notepad", { Text(L"Some not long text."), Key(VK_RETURN) }, EncodingMode::UTF16, 5);
     puts(result.GetErrorMessageUTF8().c_str());
 

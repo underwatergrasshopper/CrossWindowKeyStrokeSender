@@ -185,14 +185,21 @@ inline bool WaitForMS(unsigned wait_time) {
 inline std::wstring UTF8_ToUTF16(const std::string& text) {
     std::wstring text_utf16;
 
+    enum { COUNT = 256 };
+    static wchar_t s_buffer[COUNT] = {};
+
+    wchar_t* buffer = nullptr;
+
     if (text.length()) {
         const int count = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
-        wchar_t* buffer = new wchar_t[count];
+
+        buffer = (count > COUNT) ? (new wchar_t[count]) : s_buffer;
 
         if (MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, buffer, count)) {
             text_utf16 = std::wstring(buffer);
         }
-        delete[] buffer;
+
+        if (buffer != s_buffer) delete[] buffer;
     }
     return text_utf16;
 }
@@ -200,14 +207,21 @@ inline std::wstring UTF8_ToUTF16(const std::string& text) {
 inline std::string UTF16_ToUTF8(const std::wstring& text) {
     std::string text_utf8;
 
+    enum { COUNT = 256 };
+    static char s_buffer[COUNT] = {};
+
+    char* buffer = nullptr;
+
     if (text.length()) {
         const int count = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, NULL, 0, NULL, NULL);
-        char* buffer = new char[count];
+
+        buffer = (count > COUNT) ? (new char[count]) : s_buffer;
 
         if (WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, buffer, count, NULL, NULL)) {
             text_utf8 = std::string(buffer);
         }
-        delete[] buffer;
+
+        if (buffer != s_buffer) delete[] buffer;
     }
     return text_utf8;
 }
@@ -379,8 +393,6 @@ inline Result SendMessages(HWND focus_window, const Message* messages, unsigned 
 
 inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
     BOOL is_success = SetForegroundWindow(target_window);
-
-    WaitForMS(100);
 
     if (!is_success) return Result(ErrorID::CAN_NOT_SET_TARGET_WINDOW_AS_FOREGROUND, "Can not set target widnow as foreground window.", true);
 
