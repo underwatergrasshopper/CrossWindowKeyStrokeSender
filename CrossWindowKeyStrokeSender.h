@@ -83,14 +83,13 @@ enum KeyAction {
     DOWN_AND_UP = DOWN | UP,
 };
 
-enum class EncodingModeID {
-    UTF8,
+enum class MessageEncodingID {
+    ASCII,
     UTF16,
 };
 
 enum class DeliveryModeID {
     SEND,
-    SEND_INPUT,
     POST,
 };
 
@@ -200,6 +199,7 @@ public:
     bool IsError() const { return !IsOk(); }
 
     ErrorID GetErrorID() const { return m_error_id; }
+    std::string GetErrorMessage() const { return m_error_message_utf8; }
     std::string GetErrorMessageUTF8() const { return m_error_message_utf8; }
     std::wstring GetErrorMessageUTF16() const { return m_error_message_utf16; }
     int GetErrorCode() const { return m_last_error_code; }
@@ -215,7 +215,7 @@ private:
 // Action
 //==============================================================================
 
-enum ActionTypeID {
+enum class ActionTypeID {
     NONE                    = 0,
     KEY                     = 1,
     TEXT                    = 2,
@@ -223,24 +223,27 @@ enum ActionTypeID {
     DELAY                   = 4,
     MESSAGE_ENCODING        = 5,
     DELIVERY_MODE           = 6,
+    INPUT                   = 7,
 };
 
 struct Action {
-    int             type_id;
+    ActionTypeID        type_id;
 
-    int             vk_code;            // KEY
-    int             key_action;         // KEY
-    std::string     text_utf8;          // TEXT
-    std::wstring    text_utf16;         // TEXT
+    int                 vk_code;                // KEY
+    int                 key_action;             // KEY
+    std::string         text_utf8;              // TEXT
+    std::wstring        text_utf16;             // TEXT
 
-    int             scan_code;          // KEY
-    LPARAM          l_param_down;       // KEY
-    LPARAM          l_param_up;         // KEY
+    int                 scan_code;              // KEY
+    LPARAM              l_param_down;           // KEY
+    LPARAM              l_param_up;             // KEY
 
-    unsigned        wait_time;          // WAIT                 // in milliseconds
-    unsigned        delay;              // DELAY
-    EncodingModeID  encoding_mode_id;   // MESSAGE_ENCODING
-    DeliveryModeID  delivery_mode_id;   // DELIVERY_MODE
+    unsigned            wait_time;              // WAIT                 // in milliseconds
+    unsigned            delay;                  // DELAY
+    MessageEncodingID   message_encoding_id;    // MESSAGE_ENCODING
+    DeliveryModeID      delivery_mode_id;       // DELIVERY_MODE
+
+    std::vector<INPUT>  inputs;                 // INPUT
 };
 
 class Key {
@@ -269,6 +272,7 @@ class Text {
 public:
     Text()  : m_action({}) {}
 
+    // @param text      Unicode text in utf-8 format.
     explicit Text(const std::string& text)  : m_action({}) {
         m_action.type_id       = ActionTypeID::TEXT;
 
@@ -276,6 +280,7 @@ public:
         m_action.text_utf16    = UTF8_ToUTF16(text);
     }
 
+    // @param text      Unicode text in utf-16 format.
     explicit Text(const std::wstring& text)  : m_action({}) {
         m_action.type_id       = ActionTypeID::TEXT;
 
@@ -305,11 +310,11 @@ private:
     Action m_action;  
 };
 
-class Delay {
+class EachMessageAfterDelay {
 public:
-    Delay()  : m_action({}) {}
+    EachMessageAfterDelay()  : m_action({}) {}
 
-    explicit Delay(unsigned delay)  : m_action({}) {
+    explicit EachMessageAfterDelay(unsigned delay)  : m_action({}) {
         m_action.type_id       = ActionTypeID::DELAY;
 
         m_action.delay         = delay;
@@ -324,10 +329,10 @@ class MessageEncoding {
 public:
     MessageEncoding()  : m_action({}) {}
 
-    explicit MessageEncoding(EncodingModeID encoding_mode_id)  : m_action({}) {
-        m_action.type_id            = ActionTypeID::MESSAGE_ENCODING;
+    explicit MessageEncoding(MessageEncodingID message_encoding_id)  : m_action({}) {
+        m_action.type_id                = ActionTypeID::MESSAGE_ENCODING;
 
-        m_action.encoding_mode_id   = encoding_mode_id;
+        m_action.message_encoding_id    = message_encoding_id;
     }
 
     operator Action() const { return m_action; }
@@ -335,14 +340,14 @@ private:
     Action m_action;  
 };
 
-class UTF8 : public MessageEncoding {
+class MessageEncodingASCII : public MessageEncoding {
 public:
-    UTF8() : MessageEncoding(EncodingModeID::UTF8) {}
+    MessageEncodingASCII() : MessageEncoding(MessageEncodingID::ASCII) {}
 };
 
-class UTF16 : public MessageEncoding {
+class MessageEncodingUTF16 : public MessageEncoding {
 public:
-    UTF16() : MessageEncoding(EncodingModeID::UTF16) {}
+    MessageEncodingUTF16() : MessageEncoding(MessageEncodingID::UTF16) {}
 };
 
 class DeliveryMode {
@@ -350,7 +355,7 @@ public:
     DeliveryMode()  : m_action({}) {}
 
     explicit DeliveryMode(DeliveryModeID delivery_mode_id)  : m_action({}) {
-        m_action.type_id            = ActionTypeID::DELIVERY_MODE;
+        m_action.type_id                = ActionTypeID::DELIVERY_MODE;
 
         m_action.delivery_mode_id       = delivery_mode_id;
     }
@@ -360,20 +365,114 @@ private:
     Action m_action;  
 };
 
-class Send : public DeliveryMode {
+class DeliveryModeSend : public DeliveryMode {
 public:
-    Send() : DeliveryMode(DeliveryModeID::SEND) {}
+    DeliveryModeSend() : DeliveryMode(DeliveryModeID::SEND) {}
 };
 
-class SendInput : public DeliveryMode {
+class DeliveryModePost : public DeliveryMode {
 public:
-    SendInput() : DeliveryMode(DeliveryModeID::SEND_INPUT) {}
+    DeliveryModePost() : DeliveryMode(DeliveryModeID::POST) {}
 };
 
-class Post : public DeliveryMode {
+class Input {
 public:
-    Post() : DeliveryMode(DeliveryModeID::POST) {}
+    Input()  : m_action({}) {}
+
+    // Makes input messages. All Text actions are converted to messages in utf-16 format.
+    // @actions         Only Key and Text actions are processed. Other are ignorored.
+    template <unsigned COUNT>
+    explicit Input(const Action (&actions)[COUNT]) : m_action({}) {
+        m_action.type_id = ActionTypeID::INPUT;
+
+        //m_action.inputs.reserve(COUNT * 2);
+
+        for (const auto& action : actions) {
+            switch (action.type_id) {
+            case ActionTypeID::KEY:
+                MakeKeyInput(m_action.inputs, action.vk_code, action.key_action);
+                break;
+            case ActionTypeID::TEXT:
+                MakeTextInputUTF16(m_action.inputs, action.text_utf16);
+                break;
+            } 
+        }
+    }
+
+    operator Action() const { return m_action; }
+
+private:
+    static void MakeKeyInput(std::vector<INPUT>& inputs, int vk_code, int key_action) {
+        if (key_action & KeyAction::DOWN) {
+            INPUT input = {};
+
+            input.type              = INPUT_KEYBOARD;
+            input.ki.wVk            = VK_RETURN;
+            input.ki.wScan          = 0;
+            input.ki.time           = 0;
+            input.ki.dwFlags        = 0;
+            input.ki.dwExtraInfo    = 0;
+
+            inputs.push_back(input);
+        }
+
+        if (key_action & KeyAction::DOWN) {
+            INPUT input = {};
+
+            input.type              = INPUT_KEYBOARD;
+            input.ki.wVk            = VK_RETURN;
+            input.ki.wScan          = 0;
+            input.ki.time           = 0;
+            input.ki.dwFlags        = KEYEVENTF_KEYUP;
+            input.ki.dwExtraInfo    = 0;
+
+            inputs.push_back(input);
+        }
+    }
+
+    static void MakeTextInputUTF16(std::vector<INPUT>& inputs, const std::wstring& text) {
+        for (const wchar_t& sign : text) {
+            INPUT input = {};
+
+            input.type              = INPUT_KEYBOARD;
+            input.ki.wVk            = 0;
+            input.ki.wScan          = (short)sign;
+            input.ki.time           = 0;
+            input.ki.dwFlags        = KEYEVENTF_UNICODE;
+            input.ki.dwExtraInfo    = 0;
+      
+            inputs.push_back(input);
+
+            input = {};
+
+            input.type              = INPUT_KEYBOARD;
+            input.ki.wVk            = 0;
+            input.ki.wScan          = (short)sign;
+            input.ki.time           = 0;
+            input.ki.dwFlags        = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+            input.ki.dwExtraInfo    = 0;
+
+            inputs.push_back(input);
+        }
+    }
+
+    Action m_action;  
 };
+
+class TextInput : public Input {
+public:
+    TextInput() : Input() {}
+    explicit TextInput(const std::string& text)  : Input({Text(text)}) {}
+    explicit TextInput(const std::wstring& text)  : Input({Text(text)}) {}
+};
+
+#ifndef CWKSS_NO_SHORT_NAMES
+using Delay     = EachMessageAfterDelay;
+using ASCII     = MessageEncodingASCII;
+using UTF16     = MessageEncodingUTF16;
+using ModeSend  = DeliveryModeSend;
+using ModePost  = DeliveryModePost;
+#endif // CWKSS_NO_SHORT
 
 //==============================================================================
 // WaitForMS
@@ -459,6 +558,10 @@ inline WaitResultID WaitForMS(unsigned wait_time) {
     return WaitResultID::SUCCESS;
 }
 
+inline void PreInitializeWaitForMS() {
+    WaitForMS(0);
+}
+
 //==============================================================================
 // SendToWindow
 //==============================================================================
@@ -468,10 +571,14 @@ inline WaitResultID WaitForMS(unsigned wait_time) {
 //                                      Name of the window can be in ascii, utf-8 or utf-16 encoding: "Window Name", u8"Window Name", L"Window Name"
 // @param target_window                 Handle to target window. Messages will be sent to this window.  [function variation]
 // @param actions                       Array which contains any combination of following actions:
-//                                          UTF8()                        - (Default) All followed messages will be sent as UTF8 message (by winapi function with A suffix).
-//                                          UTF16()                       - All followed messages will be sent as UTF16 message (by winapi function with W suffix).
-//                                          Delay(delay)                  - All followed messages will have dalay, in milliseconds, after each send of message.
+//                                          DeliveryModeSend()            - (Default) Function waits until message is delivered before sending another.
+//                                          DeliveryModePos()             - Function does not waits until message is delivered before sending another.
+//                                          MessageEncodingASCII()        - (Default) All key and text messages will be sent as ASCII message (by winapi function with A suffix).
+//                                          MessageEncodingUTF16()        - All key and text messages will be sent as UTF16 message (by winapi function with W suffix).
+//                                          EveryMessageAfterDelay(delay) - All key and text messages will have dalay, in milliseconds, after each send of message.
 //                                                                          Value of delay can not be bigger than MAX_WAIT_TIME.
+//                                          Wait(wait_time)               - No message is send. Program wait for given amount of time.
+//                                                                          Value of wait_time can not be bigger than MAX_WAIT_TIME.
 //                                          Key(vk_code)                  - Sends key down message and key down message (as Virtual Key Code) to target window.
 //                                          Key(vk_code, key_action)      - Sends key message (as Virtual Key Code) to target window.
 //                                                                          vk_code:      VK_RETURN, VK_...
@@ -479,6 +586,7 @@ inline WaitResultID WaitForMS(unsigned wait_time) {
 //                                          Text(text)                    - Sends text to target target window. 
 //                                                                          Text will be send to element of window which currently have keyboard focus.
 //                                                                          The text can be in ascii, utf-8 or utf-16 encoding: Text("Window Name"), Text(u8"Window Name"), Text(L"Window Name").
+//                                          Input({action, ...})          - Sends messages in one input. Accepts only Key and Text actions. Sends messages in utf-16 encoding format only.
 // @param count                         Number of actions.                                              [function variation]
 Result SendToWindow(HWND target_window, const Action* actions, unsigned count);
 Result SendToWindow(const std::wstring& target_window_name, const Action* actions, unsigned count);
@@ -489,22 +597,11 @@ template <unsigned COUNT>
 Result SendToWindow(const std::string& target_window_name, const Action (&actions)[COUNT]);
 
 
-inline void PostKey(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
-    if (encoding_mode_id == EncodingModeID::UTF16) {
-        if (message.key_action & KeyAction::DOWN) {
-            if (!PostMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
-                result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
-                return;
-            }
-        }
+inline void PostKey(HWND window, MessageEncodingID message_encoding_id, const Action& message, Result& result) {
+    dbg_cwkss_printf("PostKey\n");
+    dbg_cwkss_print_int(message_encoding_id);
 
-        if (message.key_action & KeyAction::UP) {
-            if (!PostMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up)) {
-                result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key up message.", true);
-                return;
-            }
-        }
-    } else {
+    if (message_encoding_id == MessageEncodingID::ASCII) {
         if (message.key_action & KeyAction::DOWN) {
             if (!PostMessageA(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
@@ -518,19 +615,28 @@ inline void PostKey(HWND window, EncodingModeID encoding_mode_id, const Action& 
                 return;
             }
         }
-    }
-}
-
-inline void SendKey(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
-    if (encoding_mode_id == EncodingModeID::UTF16) {
+    } else {
         if (message.key_action & KeyAction::DOWN) {
-            SendMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
+            if (!PostMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
+                result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
+                return;
+            }
         }
 
         if (message.key_action & KeyAction::UP) {
-            SendMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up);
+            if (!PostMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up)) {
+                result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key up message.", true);
+                return;
+            }
         }
-    } else {
+    }
+}
+
+inline void SendKey(HWND window, MessageEncodingID message_encoding_id, const Action& message, Result& result) {
+    dbg_cwkss_printf("SendKey\n");
+    dbg_cwkss_print_int(message_encoding_id);
+
+    if (message_encoding_id == MessageEncodingID::ASCII) {
         if (message.key_action & KeyAction::DOWN) {
             SendMessageA(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
         }
@@ -538,81 +644,98 @@ inline void SendKey(HWND window, EncodingModeID encoding_mode_id, const Action& 
         if (message.key_action & KeyAction::UP) {
             SendMessageA(window, WM_KEYUP, message.vk_code, message.l_param_up);
         }
+    } else {
+        if (message.key_action & KeyAction::DOWN) {
+            SendMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
+        }
+
+        if (message.key_action & KeyAction::UP) {
+            SendMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up);
+        }
     }
 }
 
-inline void PostText(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
-    dbg_cwkss_print_int(encoding_mode_id);
+inline void PostText(HWND window, MessageEncodingID message_encoding_id, const Action& message, Result& result) {
+    dbg_cwkss_printf("PostText\n");
+    dbg_cwkss_print_int(message_encoding_id);
 
-    if (encoding_mode_id == EncodingModeID::UTF16) {
-        for (const auto& sign : message.text_utf16) {
-            if (!PostMessageW(window, WM_CHAR, (unsigned short)sign, 0)) {
-                result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post character message.", true);
-                return;
-            }
-        }
-    } else {
+    if (message_encoding_id == MessageEncodingID::ASCII) {
         for (const auto& sign : message.text_utf8) {
             if (!PostMessageA(window, WM_CHAR, (unsigned short)sign, 0)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post character message.", true);
                 return;
             }
         }
+    } else {
+        for (const auto& sign : message.text_utf16) {
+            if (!PostMessageW(window, WM_CHAR, (unsigned short)sign, 0)) {
+                result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post character message.", true);
+                return;
+            }
+        }
     }
 }
 
-inline void SendText(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
-    dbg_cwkss_print_int(encoding_mode_id);
+inline void SendText(HWND window, MessageEncodingID message_encoding_id, const Action& message, Result& result) {
     dbg_cwkss_printf("SendText\n");
+    dbg_cwkss_print_int(message_encoding_id);
 
-    if (encoding_mode_id == EncodingModeID::UTF16) {
-        for (const auto& sign : message.text_utf16) {
-            SendMessageW(window, WM_CHAR, (unsigned short)sign, 0);
-        }
-    } else {
+    if (message_encoding_id == MessageEncodingID::ASCII) {
         for (const auto& sign : message.text_utf8) {
             SendMessageA(window, WM_CHAR, (unsigned short)sign, 0);
         }
+    } else {
+        for (const auto& sign : message.text_utf16) {
+            SendMessageW(window, WM_CHAR, (unsigned short)sign, 0);
+        }
+    }
+}
+
+inline void SendInput(const Action& action, Result& result) {
+    dbg_cwkss_printf("SendInput\n");
+
+    std::vector<INPUT> inputs = action.inputs; // Unfortunately SendInput accepts non constant pointer only.
+
+    dbg_cwkss_print_int(inputs.size());
+
+    UINT count = SendInput(inputs.size(), &(inputs[0]), sizeof(INPUT));
+
+    if (count < inputs.size()) {
+        result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not send input message.", true);
     }
 }
 
 inline Result SendMessages(HWND focus_window, const Action* actions, unsigned count) {
     Result result;
 
-    unsigned        delay               = 0;
-    EncodingModeID  encoding_mode_id    = EncodingModeID::UTF8;
-    DeliveryModeID  delivery_mode_id    = DeliveryModeID::SEND;
+    unsigned            delay                   = 0;
+    MessageEncodingID   message_encoding_id     = MessageEncodingID::ASCII;
+    DeliveryModeID      delivery_mode_id        = DeliveryModeID::SEND;
 
-    // Static delay to make sure that, target window goes to foreground.
-    // WaitForMS(100); // Pre-Initialize internal performance counters in Wait functions.
+    PreInitializeWaitForMS(); 
 
     for (unsigned ix = 0; ix < count; ix++) {
         const Action& action = actions[ix];
 
         switch (action.type_id) {
         case ActionTypeID::TEXT: {
-            // TODO: SendInput
-            //if (delivery_mode_id == DeliveryModeID::SEND_INPUT) {
-            //    SendInputText(focus_window, encoding_mode_id, action, result);
-            //} else 
-            if (delivery_mode_id == DeliveryModeID::POST) {
-                PostText(focus_window, encoding_mode_id, action, result);
-            } else {
-                SendText(focus_window, encoding_mode_id, action, result);
+            switch (delivery_mode_id) {
+            case DeliveryModeID::POST:          PostText(focus_window, message_encoding_id, action, result);   break;
+            case DeliveryModeID::SEND:          SendText(focus_window, message_encoding_id, action, result);   break;
             }
             if (result.IsError()) return result;
             break;
         }
         case ActionTypeID::KEY: {
-            // TODO: SendInput
-            //if (delivery_mode_id == DeliveryModeID::SEND_INPUT) {
-            //    SendInputKey(focus_window, encoding_mode_id, action, result);
-            //} else 
-            if (delivery_mode_id == DeliveryModeID::POST) {
-                PostKey(focus_window, encoding_mode_id, action, result);
-            } else {
-                SendKey(focus_window, encoding_mode_id, action, result);
+            switch (delivery_mode_id) {
+            case DeliveryModeID::POST:          PostKey(focus_window, message_encoding_id, action, result);   break;
+            case DeliveryModeID::SEND:          SendKey(focus_window, message_encoding_id, action, result);   break;
             }
+            if (result.IsError()) return result;
+            break;
+        }
+        case ActionTypeID::INPUT: {
+            SendInput(action, result);
             if (result.IsError()) return result;
             break;
         }
@@ -626,7 +749,7 @@ inline Result SendMessages(HWND focus_window, const Action* actions, unsigned co
             break;
         }
         case ActionTypeID::MESSAGE_ENCODING: {
-            encoding_mode_id = action.encoding_mode_id;
+            message_encoding_id = action.message_encoding_id;
             break;
         }
         case ActionTypeID::DELIVERY_MODE: {
@@ -687,10 +810,7 @@ inline Result SendToWindow(HWND target_window, const Action* actions, unsigned c
     if (!caller_window_thread_id) return Result(ErrorID::CAN_NOT_RECEIVE_CALLER_WINDOW_THREAD_ID, "Can not receive caller window thread id.");
 
     if (target_window_thread_id && (target_window_thread_id != caller_window_thread_id)) {
-
-        // BOOL is_success = AttachThreadInput(target_window_thread_id, caller_window_thread_id, TRUE); // debug
-
-        BOOL is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, TRUE) && AttachThreadInput(target_window_thread_id, caller_window_thread_id, TRUE);
+        BOOL is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, TRUE); // && AttachThreadInput(target_window_thread_id, caller_window_thread_id, TRUE); // debug
         
         if (!is_success) return Result(ErrorID::CAN_NOT_ATTACH_CALLER_TO_TARGET, "Can not attach caller window thread to target window thread.", true);
 
@@ -700,13 +820,11 @@ inline Result SendToWindow(HWND target_window, const Action* actions, unsigned c
             return result;
         }
 
-        // is_success = AttachThreadInput(target_window_thread_id, caller_window_thread_id, FALSE); // debug
-
-        is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, FALSE) && AttachThreadInput(target_window_thread_id, caller_window_thread_id, FALSE);
+        is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, FALSE); // && AttachThreadInput(target_window_thread_id, caller_window_thread_id, FALSE); // debug
 
         if (!is_success) return Result(ErrorID::CAN_NOT_DETTACH_CALLER_TO_TARGET, "Can not dettach caller window thread from target window thread.", true);
     } else {
-        // when target window is caller window
+        // When target window is caller window.
 
         Result result = SendMessages(target_window, actions, count);
 

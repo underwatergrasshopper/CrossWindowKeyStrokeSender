@@ -4,8 +4,8 @@ Simple library for sending keyboard messages to window application from other wi
 To be able use library, copy `CrossWindowKeyStrokeSender.h` file to project source folder.
 
 It's designed for short messages, which have no more than 1000 character, like sending some chat command to a video game.
-Encoding formats of message supported by library: utf-8, utf-16.
-If sent message seems to be crangled when arrives to target window, try using bigger `delay` in `SendToWindow` function.
+Encoding formats of message supported by library: ascii, utf-8 and utf-16.
+If sent message seems to be crangled when arrives to target window, try using bigger value in `Delay(delay)` in `SendToWindow` function.
 
 ## Build Info
 - Compiled on: Visual Studio 2022
@@ -15,43 +15,64 @@ If sent message seems to be crangled when arrives to target window, try using bi
 ## Usage Examples
 
 ### Example 1
-Sends chain of text messages to empty notepad window. Sended text is encoded in UTF16 and each message in chain have 5 seconds delay.
-```c++
-using namespace CWKSS;
-
-Result result;
-
-result = SendToWindow(L"Untitled - Notepad", { 
-    UTF16(), Delay(5), 
-    Text(L"Some not long text."), Key(VK_RETURN), 
-    Text(L"Some a litle longer text."), Key(VK_RETURN), 
-    Text(L"And another text."), Key(VK_RETURN) 
-});
-```
-
-### Example 2
-Sends three chains of text messages to empty notepad window. Sended text is encoded in UTF16 and each message in chain have 5 seconds delay.
-```c++
-using namespace CWKSS;
-
-Result result;
-
-result = SendToWindow(L"Untitled - Notepad", { UTF16(), Delay(5), Text(L"Some not long text."), Key(VK_RETURN) });
-if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
-
-result = SendToWindow(L"*Untitled - Notepad", { UTF16(), Delay(5), Text(L"Some a litle longer text."), Key(VK_RETURN) });
-if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
-
-result = SendToWindow(L"*Untitled - Notepad", { UTF16(), Delay(5), Text(L"And another text."), Key(VK_RETURN) });
-if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
-```
-
-### Example 3
-Sends `/kills` command to "Path of Exile"'s game window.
+Sends `/kills` command to "Path of Exile"'s game window. By default in `ModeSend()`. Might be slow, but it is most reliable method.
 ```c++
 using namespace CWKSS;
 
 Result result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
 
-if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
+
+Same example, but with utf-16 text.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow(UTF16(), L"Path of Exile", { Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN) });
+
+if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+```
+
+### Example 2
+Sends `/kills` command to "Path of Exile"'s game window. In `ModePos()`. 
+Much faster, but after each message program needs to wait some small amout of time to make sure thet posted message compleated, otherwise sent messages might end being crangled.
+Action `Delay(10)` makes sure that after each message posting, program waits for 10 milliseconds.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow("Path of Exile", { ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
+```
+
+### Example 3
+Sends `/kills` command to "Path of Exile"'s game window. An `Input({action, ...})`. In this mode all key and text messages are sent as they were pressed manualy. 
+This action needs to wait some amout of time after sending message to make sure everything were processed. All text messages are always sent in utf-16 encoding format.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow("Path of Exile", { Input({ Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) }), Wait(100)});
+
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
+```
+
+
+### Example 4
+Sends text messages to empty notepad window, with delay after each message is posted.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow("Untitled - Notepad", { ModePost(), Delay(10), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN) });
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
+```
+
+
+### Example 5
+Sends text messages to empty notepad window, in one input, with waition for 100 milliseconds after input is sent.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow("*Untitled - Notepad", { Input({ Key(VK_RETURN), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN) }), Wait(100) });
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
+```
+
