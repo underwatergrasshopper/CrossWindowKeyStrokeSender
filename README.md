@@ -4,7 +4,7 @@ Simple library for sending keyboard messages to window application from other wi
 To be able use library, copy `CrossWindowKeyStrokeSender.h` file to project source folder.
 
 It's designed for short messages, which have no more than 1000 character, like sending some chat command to a video game.
-Encoding formats of message supported by library: ascii, utf-8 and utf-16.
+Supported encoding formats for messages by this library: ascii, utf-8 and utf-16.
 If sent message seems to be crangled when arrives to target window, try using bigger value in `Delay(delay)` in `SendToWindow` function.
 
 ## Build Info
