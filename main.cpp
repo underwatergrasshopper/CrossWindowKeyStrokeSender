@@ -91,7 +91,7 @@ void RunTests() {
     dbg_cwkss_print_int(target_window);
 
     if (target_window) {
-        result = SendToWindow(target_window, messages, 2, EncodingModeID::UTF8, 1);
+        result = SendToWindow(target_window, messages, 2, 1);
         puts(result.GetErrorMessageUTF8().c_str());
     } else {
         puts("Foreground window can not be found.");
@@ -99,64 +99,64 @@ void RunTests() {
 #endif
 
 #if 0
-    result = SendToWindow(L"Untitled - Notepad", { Text(L"śćńó"), Key(VK_RETURN) }, EncodingModeID::UTF16, 5);
+    result = SendToWindow(L"Untitled - Notepad", { Delay(5), Text(L"śćńó"), Key(VK_RETURN) };
     puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
 #if 0
-    result = SendToWindow(L"Untitled - Notepad", { Text(L"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0"), Key(VK_RETURN) }, EncodingModeID::UTF16, 5);
+    result = SendToWindow(L"Untitled - Notepad", { Delay(5), Text(L"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0"), Key(VK_RETURN) };
     puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
 #if 0
-    result = SendToWindow(L"Untitled - Notepad", { Text(L"Some not long text."), Key(VK_RETURN) }, EncodingModeID::UTF16, 5);
+    result = SendToWindow(L"Untitled - Notepad", { UTF16(), Delay(5), Text(L"Some not long text."), Key(VK_RETURN) };
     puts(result.GetErrorMessageUTF8().c_str());
 
-    result = SendToWindow(L"*Untitled - Notepad", { Text(L"Some a litle longer text."), Key(VK_RETURN) }, EncodingModeID::UTF16, 5);
+    result = SendToWindow(L"*Untitled - Notepad", { UTF16(), Delay(5), Text(L"Some a litle longer text."), Key(VK_RETURN) };
     puts(result.GetErrorMessageUTF8().c_str());
 
-    result = SendToWindow(L"*Untitled - Notepad", { Text(L"And another text."), Key(VK_RETURN) }, EncodingModeID::UTF16, 5);
-    puts(result.GetErrorMessageUTF8().c_str());
-#endif
-
-#if 0
-    result = SendToWindow("*Untitled - Notepad", { Key(VK_RETURN), Text("Some not long text."), Key(VK_RETURN) }, EncodingModeID::UTF16, 1);
-    puts(result.GetErrorMessageUTF8().c_str());
-
-    result = SendToWindow(L"*Untitled - Notepad", { Key(VK_RETURN), Text(L"Some a litle longer text."), Key(VK_RETURN) }, EncodingModeID::UTF8, 1);
-    puts(result.GetErrorMessageUTF8().c_str());
-
-    result = SendToWindow(L"*Untitled - Notepad", { Key(VK_RETURN), Text(L"And another text."), Key(VK_RETURN) }, EncodingModeID::UTF8, 10);
+    result = SendToWindow(L"*Untitled - Notepad", { UTF16(), Delay(5), Text(L"And another text."), Key(VK_RETURN) };
     puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) }, EncodingModeID::UTF8, 10);
+    result = SendToWindow("*Untitled - Notepad", { UTF16(), Delay(1), Key(VK_RETURN), Text("Some not long text."), Key(VK_RETURN) };
+    puts(result.GetErrorMessageUTF8().c_str());
+
+    result = SendToWindow(L"*Untitled - Notepad", { UTF16(), Delay(1), Key(VK_RETURN), Text(L"Some a litle longer text."), Key(VK_RETURN) });
+    puts(result.GetErrorMessageUTF8().c_str());
+
+    result = SendToWindow(L"*Untitled - Notepad", { UTF8(), Delay(10), Key(VK_RETURN), Text(L"And another text."), Key(VK_RETURN) });
+    puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("Path of Exile", { UTF8(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
     if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Wait(1000), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) }, EncodingModeID::UTF8, 10);
+    result = SendToWindow("Path of Exile", { UTF8(), Delay(10), Wait(1000), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
     if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
 #if 0
-    result = SendToWindow(L"Path of Exile", { Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN)  }, EncodingModeID::UTF16, 1);
+    result = SendToWindow(L"Path of Exile", { UTF16(), Delay(1), Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN)  };
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  }, EncodingModeID::UTF8, 1);
+    result = SendToWindow("Path of Exile", { UTF8(), Delay(1), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  });
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP), Text("/kills"), Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP) }, EncodingModeID::UTF16, 10);
+    result = SendToWindow("Path of Exile", { UTF16(), Delay(10), Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP), Text("/kills"), Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP) };
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  }, EncodingModeID::UTF16, 1);
+    result = SendToWindow("Path of Exile", { UTF16(), Delay(1), Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  });
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 #endif
 
