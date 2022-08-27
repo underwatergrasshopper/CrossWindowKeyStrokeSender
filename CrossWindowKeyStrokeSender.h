@@ -88,6 +88,12 @@ enum class EncodingModeID {
     UTF16,
 };
 
+enum class DeliveryModeID {
+    SEND,
+    SEND_INPUT,
+    POST,
+};
+
 //==============================================================================
 // Conversion
 //==============================================================================
@@ -216,6 +222,7 @@ enum ActionTypeID {
     WAIT                    = 3,
     DELAY                   = 4,
     MESSAGE_ENCODING        = 5,
+    DELIVERY_MODE           = 6,
 };
 
 struct Action {
@@ -230,9 +237,10 @@ struct Action {
     LPARAM          l_param_down;       // KEY
     LPARAM          l_param_up;         // KEY
 
-    unsigned        wait_time;          // WAIT             // in milliseconds
+    unsigned        wait_time;          // WAIT                 // in milliseconds
     unsigned        delay;              // DELAY
     EncodingModeID  encoding_mode_id;   // MESSAGE_ENCODING
+    DeliveryModeID  delivery_mode_id;   // DELIVERY_MODE
 };
 
 class Key {
@@ -304,7 +312,7 @@ public:
     explicit Delay(unsigned delay)  : m_action({}) {
         m_action.type_id       = ActionTypeID::DELAY;
 
-        m_action.delay          = delay;
+        m_action.delay         = delay;
     }
 
     operator Action() const { return m_action; }
@@ -335,6 +343,36 @@ public:
 class UTF16 : public MessageEncoding {
 public:
     UTF16() : MessageEncoding(EncodingModeID::UTF16) {}
+};
+
+class DeliveryMode {
+public:
+    DeliveryMode()  : m_action({}) {}
+
+    explicit DeliveryMode(DeliveryModeID delivery_mode_id)  : m_action({}) {
+        m_action.type_id            = ActionTypeID::DELIVERY_MODE;
+
+        m_action.delivery_mode_id       = delivery_mode_id;
+    }
+
+    operator Action() const { return m_action; }
+private:
+    Action m_action;  
+};
+
+class Send : public DeliveryMode {
+public:
+    Send() : DeliveryMode(DeliveryModeID::SEND) {}
+};
+
+class SendInput : public DeliveryMode {
+public:
+    SendInput() : DeliveryMode(DeliveryModeID::SEND_INPUT) {}
+};
+
+class Post : public DeliveryMode {
+public:
+    Post() : DeliveryMode(DeliveryModeID::POST) {}
 };
 
 //==============================================================================
@@ -430,7 +468,7 @@ inline WaitResultID WaitForMS(unsigned wait_time) {
 //                                      Name of the window can be in ascii, utf-8 or utf-16 encoding: "Window Name", u8"Window Name", L"Window Name"
 // @param target_window                 Handle to target window. Messages will be sent to this window.  [function variation]
 // @param actions                       Array which contains any combination of following actions:
-//                                          UTF8()                        - All followed messages will be sent as UTF8 message (by winapi function with A suffix).
+//                                          UTF8()                        - (Default) All followed messages will be sent as UTF8 message (by winapi function with A suffix).
 //                                          UTF16()                       - All followed messages will be sent as UTF16 message (by winapi function with W suffix).
 //                                          Delay(delay)                  - All followed messages will have dalay, in milliseconds, after each send of message.
 //                                                                          Value of delay can not be bigger than MAX_WAIT_TIME.
@@ -483,6 +521,26 @@ inline void PostKey(HWND window, EncodingModeID encoding_mode_id, const Action& 
     }
 }
 
+inline void SendKey(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
+    if (encoding_mode_id == EncodingModeID::UTF16) {
+        if (message.key_action & KeyAction::DOWN) {
+            SendMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
+        }
+
+        if (message.key_action & KeyAction::UP) {
+            SendMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up);
+        }
+    } else {
+        if (message.key_action & KeyAction::DOWN) {
+            SendMessageA(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
+        }
+
+        if (message.key_action & KeyAction::UP) {
+            SendMessageA(window, WM_KEYUP, message.vk_code, message.l_param_up);
+        }
+    }
+}
+
 inline void PostText(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
     dbg_cwkss_print_int(encoding_mode_id);
 
@@ -503,26 +561,58 @@ inline void PostText(HWND window, EncodingModeID encoding_mode_id, const Action&
     }
 }
 
+inline void SendText(HWND window, EncodingModeID encoding_mode_id, const Action& message, Result& result) {
+    dbg_cwkss_print_int(encoding_mode_id);
+    dbg_cwkss_printf("SendText\n");
+
+    if (encoding_mode_id == EncodingModeID::UTF16) {
+        for (const auto& sign : message.text_utf16) {
+            SendMessageW(window, WM_CHAR, (unsigned short)sign, 0);
+        }
+    } else {
+        for (const auto& sign : message.text_utf8) {
+            SendMessageA(window, WM_CHAR, (unsigned short)sign, 0);
+        }
+    }
+}
+
 inline Result SendMessages(HWND focus_window, const Action* actions, unsigned count) {
     Result result;
 
-    unsigned        delay               = 1;
+    unsigned        delay               = 0;
     EncodingModeID  encoding_mode_id    = EncodingModeID::UTF8;
+    DeliveryModeID  delivery_mode_id    = DeliveryModeID::SEND;
 
     // Static delay to make sure that, target window goes to foreground.
-    WaitForMS(100); // Pre-Initialize internal performance counters in Wait functions.
+    // WaitForMS(100); // Pre-Initialize internal performance counters in Wait functions.
 
     for (unsigned ix = 0; ix < count; ix++) {
         const Action& action = actions[ix];
 
         switch (action.type_id) {
         case ActionTypeID::TEXT: {
-            PostText(focus_window, encoding_mode_id, action, result);
+            // TODO: SendInput
+            //if (delivery_mode_id == DeliveryModeID::SEND_INPUT) {
+            //    SendInputText(focus_window, encoding_mode_id, action, result);
+            //} else 
+            if (delivery_mode_id == DeliveryModeID::POST) {
+                PostText(focus_window, encoding_mode_id, action, result);
+            } else {
+                SendText(focus_window, encoding_mode_id, action, result);
+            }
             if (result.IsError()) return result;
             break;
         }
         case ActionTypeID::KEY: {
-            PostKey(focus_window, encoding_mode_id, action, result);
+            // TODO: SendInput
+            //if (delivery_mode_id == DeliveryModeID::SEND_INPUT) {
+            //    SendInputKey(focus_window, encoding_mode_id, action, result);
+            //} else 
+            if (delivery_mode_id == DeliveryModeID::POST) {
+                PostKey(focus_window, encoding_mode_id, action, result);
+            } else {
+                SendKey(focus_window, encoding_mode_id, action, result);
+            }
             if (result.IsError()) return result;
             break;
         }
@@ -539,6 +629,10 @@ inline Result SendMessages(HWND focus_window, const Action* actions, unsigned co
             encoding_mode_id = action.encoding_mode_id;
             break;
         }
+        case ActionTypeID::DELIVERY_MODE: {
+            delivery_mode_id = action.delivery_mode_id;
+            break;
+        }
         } // switch
 
         WaitResultID result_id = WaitForMS(delay);
@@ -548,6 +642,8 @@ inline Result SendMessages(HWND focus_window, const Action* actions, unsigned co
 }
 
 inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Action* actions, unsigned count) {
+    if (IsIconic(target_window)) ShowWindow(target_window, SW_RESTORE);
+
     BOOL is_success = SetForegroundWindow(target_window);
 
     if (!is_success) return Result(ErrorID::CAN_NOT_SET_TARGET_WINDOW_AS_FOREGROUND, "Can not set target widnow as foreground window.", true);
@@ -594,7 +690,7 @@ inline Result SendToWindow(HWND target_window, const Action* actions, unsigned c
 
         // BOOL is_success = AttachThreadInput(target_window_thread_id, caller_window_thread_id, TRUE); // debug
 
-        BOOL is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, TRUE);
+        BOOL is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, TRUE) && AttachThreadInput(target_window_thread_id, caller_window_thread_id, TRUE);
         
         if (!is_success) return Result(ErrorID::CAN_NOT_ATTACH_CALLER_TO_TARGET, "Can not attach caller window thread to target window thread.", true);
 
@@ -606,7 +702,7 @@ inline Result SendToWindow(HWND target_window, const Action* actions, unsigned c
 
         // is_success = AttachThreadInput(target_window_thread_id, caller_window_thread_id, FALSE); // debug
 
-        is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, FALSE);
+        is_success = AttachThreadInput(caller_window_thread_id, target_window_thread_id, FALSE) && AttachThreadInput(target_window_thread_id, caller_window_thread_id, FALSE);
 
         if (!is_success) return Result(ErrorID::CAN_NOT_DETTACH_CALLER_TO_TARGET, "Can not dettach caller window thread from target window thread.", true);
     } else {

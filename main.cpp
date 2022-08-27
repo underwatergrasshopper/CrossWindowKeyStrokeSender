@@ -135,6 +135,11 @@ void RunTests() {
     if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
 #endif
 
+#if 1
+    result = SendToWindow("Path of Exile", { Send(), UTF8(), Delay(0), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+    if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
+#endif
+
 #if 0
     result = SendToWindow("Path of Exile", { UTF8(), Delay(10), Wait(1000), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
     if (result.IsError()) puts(result.GetErrorMessageUTF8().c_str());
