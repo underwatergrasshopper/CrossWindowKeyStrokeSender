@@ -71,6 +71,8 @@ using TString = std::string;
 #define cwkss_print_i64(val) { printf(#val"=%lld\n", (long long)(val)); fflush(stdout); } (void)0
 #define cwkss_print_u64(val) { printf(#val"=%ulld\n", (long long unsigned)(val)); fflush(stdout); } (void)0
 
+#define CWKSS_CASE_STR(id) case id: return #id
+
 enum {
     MAX_WAIT_TIME = 1000 * 60 * 60,    // in milliseconds
 };
@@ -94,14 +96,16 @@ enum class ErrorID {
     CAN_NOT_SET_CALLER_WINDOW_AS_FOREGROUND     = 9,
     CAN_NOT_DETTACH_CALLER_TO_TARGET            = 10,
     CALLER_IS_TARGET                            = 11,
+    CAN_NOT_WAIT                                = 12,
 };
 
 enum MessageTypeID {
     KEY         = 0,
     TEXT        = 1,
+    WAIT        = 2,
 };
 
-enum class EncodingMode {
+enum class EncodingModeID {
     UTF8,
     UTF16,
 };
@@ -124,16 +128,42 @@ struct Message {
     int             scan_code;      // KEY
     LPARAM          l_param_down;   // KEY
     LPARAM          l_param_up;     // KEY
+
+    unsigned        wait_time;      // WAIT     // in milliseconds
 };
+
+enum class WaitResultID {
+    SUCCESS                     = 0,
+    ERROR_TO_BIG_WAIT_TIME      = 1,
+    ERROR_INTERNAL_OVERFLOW     = 2,
+};
+
+inline bool IsError(WaitResultID id) {
+    return id != WaitResultID::SUCCESS;
+}
+
+inline bool IsOk(WaitResultID id) {
+    return id == WaitResultID::SUCCESS;
+}
+
+inline std::string WaitResultID_ToString(WaitResultID id) {
+    switch (id) {
+    CWKSS_CASE_STR(WaitResultID::SUCCESS);
+    CWKSS_CASE_STR(WaitResultID::ERROR_TO_BIG_WAIT_TIME);
+    CWKSS_CASE_STR(WaitResultID::ERROR_INTERNAL_OVERFLOW);
+    }
+    return "";
+}
 
 // Waits for specified amount of time.
 // @param wait_time Time in milliseconds, not bigger than MAX_WAIT_TIME.
-// @returns         false - if wait time is too big (function do not wait for amount of time, returns immediately), true - otherwise.
-//                  Note: Function might fail and return false even when time is below MAX_WAIT_TIME. 
-//                  That means internal performance counter owerflowed. 
-//                  Some tests showed that, system must be running for even 29 years straight, to this be able to happen.
-//                  So this scenario is most unlikely.
-inline bool WaitForMS(unsigned wait_time) {
+// @returns         WaitErrorID:
+//                      NONE                - no error;
+//                      TO_BIG_WAIT_TIME    - wait_time is bigger than MAX_WAIT_TIME;
+//                      INTERNAL_OVERFLOW   - when internal performance counter overflow.
+//                  Note: Some tests showed that, system must be running for even 29 years straight, to INTERNAL_OVERFLOW be able to happen.
+//                  So this scenario is very unlikely.
+inline WaitResultID WaitForMS(unsigned wait_time) {
     // Performance Counter Frequency does not change while system is running, so only need to be loaded once.
     static LARGE_INTEGER s_frequency = []() {
         LARGE_INTEGER frequency;
@@ -145,7 +175,7 @@ inline bool WaitForMS(unsigned wait_time) {
     }();
 
     if (wait_time > 0) {
-        if (wait_time > MAX_WAIT_TIME) return false;
+        if (wait_time > MAX_WAIT_TIME) return WaitResultID::ERROR_TO_BIG_WAIT_TIME;
 
         dbg_cwkss_print_i64(s_frequency.QuadPart);
 
@@ -158,11 +188,11 @@ inline bool WaitForMS(unsigned wait_time) {
 
             // Performance Counter overflow check
             if (begin.QuadPart > (LLONG_MAX / 1000)) {
-                return false;
+                return WaitResultID::ERROR_INTERNAL_OVERFLOW;
             }
             const int64_t max_delay = (LLONG_MAX - begin.QuadPart * 1000) / s_frequency.QuadPart;
             if (int64_t(wait_time) > max_delay) {
-                return false;
+                return WaitResultID::ERROR_INTERNAL_OVERFLOW;
             }
 
             dbg_cwkss_print_i64(max_delay);
@@ -179,7 +209,7 @@ inline bool WaitForMS(unsigned wait_time) {
             Sleep(wait_time);
         }
     }
-    return true;
+    return WaitResultID::SUCCESS;
 }
 
 inline std::wstring UTF8_ToUTF16(const std::string& text) {
@@ -269,8 +299,8 @@ private:
     int             m_last_error_code;    // Contains result from GetLastError() of WinApi library.
 };
 
-inline void PostKey(HWND window, EncodingMode encoding_mode, const Message& message, Result& result) {
-    if (encoding_mode == EncodingMode::UTF16) {
+inline void PostKey(HWND window, EncodingModeID encoding_mode_id, const Message& message, Result& result) {
+    if (encoding_mode_id == EncodingModeID::UTF16) {
         if (message.key_action & KeyAction::DOWN) {
             if (!PostMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
@@ -301,8 +331,8 @@ inline void PostKey(HWND window, EncodingMode encoding_mode, const Message& mess
     }
 }
 
-inline void PostText(HWND window, EncodingMode encoding_mode, const Message& message, Result& result) {
-    if (encoding_mode == EncodingMode::UTF16) {
+inline void PostText(HWND window, EncodingModeID encoding_mode_id, const Message& message, Result& result) {
+    if (encoding_mode_id == EncodingModeID::UTF16) {
         for (const auto& sign : message.text_utf16) {
             if (!PostMessageW(window, WM_CHAR, (unsigned short)sign, 0)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post character message.", true);
@@ -365,7 +395,24 @@ private:
     Message m_message;  
 };
 
-inline Result SendMessages(HWND focus_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
+// It's actualy not a message to sent. Its made to wait for specified amount of time.
+class Wait {
+public:
+    Wait()  : m_message({}) {}
+
+    explicit Wait(unsigned wait_time)  : m_message({}) {
+        m_message.type_id       = MessageTypeID::WAIT;
+
+        m_message.wait_time     = wait_time;
+    }
+
+    operator Message() const { return m_message; }
+
+private:
+    Message m_message;  
+};
+
+inline Result SendMessages(HWND focus_window, const Message* messages, unsigned count, EncodingModeID encoding_mode_id, unsigned delay) {
     Result result;
 
     // Static delay to make sure that, target window goes to foreground.
@@ -376,22 +423,29 @@ inline Result SendMessages(HWND focus_window, const Message* messages, unsigned 
 
         switch (message.type_id) {
         case MessageTypeID::TEXT: {
-            PostText(focus_window, encoding_mode, message, result);
+            PostText(focus_window, encoding_mode_id, message, result);
             if (result.IsError()) return result;
             break;
         }
         case MessageTypeID::KEY: {
-            PostKey(focus_window, encoding_mode, message, result);
+            PostKey(focus_window, encoding_mode_id, message, result);
             if (result.IsError()) return result;
             break;
         }
+        case MessageTypeID::WAIT: {
+            WaitResultID result_id = WaitForMS(message.wait_time);
+            if (IsError(result_id))  return Result(ErrorID::CAN_NOT_WAIT, "Can not wait for specified amount of time from WAIT message (" + WaitResultID_ToString(result_id) + ").");
+            break;
         }
-        WaitForMS(delay);
+        } // switch
+
+        WaitResultID result_id = WaitForMS(delay);
+        if (IsError(result_id))  return Result(ErrorID::CAN_NOT_WAIT, "Can not wait for specified amount of time after sending message (" + WaitResultID_ToString(result_id) + ").");
     }
     return result;
 }
 
-inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
+inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Message* messages, unsigned count, EncodingModeID encoding_mode_id, unsigned delay) {
     BOOL is_success = SetForegroundWindow(target_window);
 
     if (!is_success) return Result(ErrorID::CAN_NOT_SET_TARGET_WINDOW_AS_FOREGROUND, "Can not set target widnow as foreground window.", true);
@@ -402,7 +456,7 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 
     if (!focus_window) return Result(ErrorID::CAN_NOT_GET_WINDOW_WITH_KEYBOARD_FOCUS, "Can not get window with keyboard focus.", true);
 
-    Result result = SendMessages(focus_window, messages, count, encoding_mode, delay);
+    Result result = SendMessages(focus_window, messages, count, encoding_mode_id, delay);
     if (result.IsError()) return result;
 
     is_success = SetForegroundWindow(foreground_window);
@@ -417,11 +471,11 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 // @param target_window         Handle to target window.
 // @param messages              Messages to sent.
 // @param count                 Number of messages.
-// @param encoding_mode         Decides if message will be sended in UTF16 or UTF8 encoding.
+// @param encoding_mode_id         Decides if message will be sended in UTF16 or UTF8 encoding.
 //                              Note: WinApi functions with suffix A are used for UTF8 mode.
 //                              Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                 Delay in milliseconds between sending messages.
-inline Result SendToWindow(HWND target_window, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
+// @param delay                 The delay, in milliseconds, after each message is sent.
+inline Result SendToWindow(HWND target_window, const Message* messages, unsigned count, EncodingModeID encoding_mode_id, unsigned delay) {
     HWND foreground_window = GetForegroundWindow();
 
     dbg_cwkss_print_int(foreground_window);
@@ -448,7 +502,7 @@ inline Result SendToWindow(HWND target_window, const Message* messages, unsigned
         
         if (!is_success) return Result(ErrorID::CAN_NOT_ATTACH_CALLER_TO_TARGET, "Can not attach caller window thread to target window thread.", true);
 
-        Result result = FocusAndSendMessages(target_window, foreground_window, messages, count, encoding_mode, delay);
+        Result result = FocusAndSendMessages(target_window, foreground_window, messages, count, encoding_mode_id, delay);
         if (result.IsError()) {
             AttachThreadInput(caller_window_thread_id, target_window_thread_id, FALSE);
             return result;
@@ -462,7 +516,7 @@ inline Result SendToWindow(HWND target_window, const Message* messages, unsigned
     } else {
         // when target window is caller window
 
-        Result result = SendMessages(target_window, messages, count, encoding_mode, delay);
+        Result result = SendMessages(target_window, messages, count, encoding_mode_id, delay);
 
         if (result.IsError()) return result;
     }
@@ -473,57 +527,57 @@ inline Result SendToWindow(HWND target_window, const Message* messages, unsigned
 // @param target_window                Name of the window to which messages will be sent.
 // @param messages                     Messages to sent.
 // @param count                        Number of messages.
-// @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
+// @param encoding_mode_id                Decides if message will be sended in UTF16 or UTF8 encoding.
 //                                     Note: WinApi functions with suffix A are used for UTF8 mode.
 //                                     Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in milliseconds between sending messages.
-inline Result SendToWindow(const std::wstring& target_window_name, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
+// @param delay                        The delay, in milliseconds, after each message is sent.
+inline Result SendToWindow(const std::wstring& target_window_name, const Message* messages, unsigned count, EncodingModeID encoding_mode_id, unsigned delay) {
     HWND target_window = FindWindowW(NULL, target_window_name.c_str());
 
     dbg_cwkss_print_int(target_window);
     
     if (!target_window) return Result(ErrorID::CAN_NOT_FIND_TARGET_WINDOW, "Can not find target window.", true);
 
-    return SendToWindow(target_window, messages, count, encoding_mode, delay);
+    return SendToWindow(target_window, messages, count, encoding_mode_id, delay);
 }
 
 // @param target_window                Name of the window to which messages will be sent.
 // @param messages                     Messages to sent.
 // @param count                        Number of messages.
-// @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
+// @param encoding_mode_id                Decides if message will be sended in UTF16 or UTF8 encoding.
 //                                     Note: WinApi functions with suffix A are used for UTF8 mode.
 //                                     Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in milliseconds between sending messages.
-inline Result SendToWindow(const std::string& target_window_name, const Message* messages, unsigned count, EncodingMode encoding_mode, unsigned delay) {
+// @param delay                        The delay, in milliseconds, after each message is sent.
+inline Result SendToWindow(const std::string& target_window_name, const Message* messages, unsigned count, EncodingModeID encoding_mode_id, unsigned delay) {
     HWND target_window = FindWindowA(NULL, target_window_name.c_str());
 
     dbg_cwkss_print_int(target_window);
 
     if (!target_window) return Result(ErrorID::CAN_NOT_FIND_TARGET_WINDOW, "Can not find target window.", true);
 
-    return SendToWindow(target_window, messages, count, encoding_mode, delay);
+    return SendToWindow(target_window, messages, count, encoding_mode_id, delay);
 }
 
 // @param target_window                Name of the window to which messages will be sent.
 // @param messages                     Messages to sent.
-// @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
+// @param encoding_mode_id                Decides if message will be sended in UTF16 or UTF8 encoding.
 // @param                              Note: WinApi functions with suffix A are used for UTF8 mode.
 // @param                              Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in milliseconds between sending messages.
+// @param delay                        The delay, in milliseconds, after each message is sent.
 template <unsigned COUNT>
-inline Result SendToWindow(const std::wstring& target_window_name, const Message (&messages)[COUNT], EncodingMode encoding_mode = EncodingMode::UTF8, unsigned delay = 1) {
-    return SendToWindow(target_window_name, (const Message*)messages, COUNT, encoding_mode, delay);
+inline Result SendToWindow(const std::wstring& target_window_name, const Message (&messages)[COUNT], EncodingModeID encoding_mode_id = EncodingModeID::UTF8, unsigned delay = 1) {
+    return SendToWindow(target_window_name, (const Message*)messages, COUNT, encoding_mode_id, delay);
 }
 
 // @param target_window                Name of the window to which messages will be sent.
 // @param messages                     Messages to sent.
-// @param encoding_mode                Decides if message will be sended in UTF16 or UTF8 encoding.
+// @param encoding_mode_id                Decides if message will be sended in UTF16 or UTF8 encoding.
 // @param                              Note: WinApi functions with suffix A are used for UTF8 mode.
 // @param                              Note: WinApi functions with suffix W are used for UTF16 mode.
-// @param delay                        Delay in milliseconds between sending messages.
+// @param delay                        The delay, in milliseconds, after each message is sent.
 template <unsigned COUNT>
-inline Result SendToWindow(const std::string& target_window_name, const Message (&messages)[COUNT], EncodingMode encoding_mode = EncodingMode::UTF8, unsigned delay = 1) {
-    return SendToWindow(target_window_name, (const Message*)messages, COUNT, encoding_mode, delay);
+inline Result SendToWindow(const std::string& target_window_name, const Message (&messages)[COUNT], EncodingModeID encoding_mode_id = EncodingModeID::UTF8, unsigned delay = 1) {
+    return SendToWindow(target_window_name, (const Message*)messages, COUNT, encoding_mode_id, delay);
 }
 
 } // namespace CrossWindowKeyStrokeSender
