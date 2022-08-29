@@ -61,7 +61,7 @@ Result result = SendToWindow(UTF16(), "Path of Exile", Key(VK_RETURN), Text(L"/k
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
-With actions sended as a table.
+With actions sent as a table.
 ```c++
 using namespace CWKSS;
 
@@ -73,7 +73,7 @@ Result result = SendToWindow("Path of Exile", actions);
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
-With actions sended directly as a table.
+With actions sent directly as a table.
 ```c++
 using namespace CWKSS;
 
@@ -82,7 +82,7 @@ Result result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), 
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
-With actions sended as pointer to dynamicaly allocated table, and size.
+With actions sent as pointer to dynamicaly allocated table, and size.
 ```c++
 using namespace CWKSS;
 
