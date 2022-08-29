@@ -19,16 +19,81 @@ Sends `/kills` command to "Path of Exile"'s game window, by using delivery mode:
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+Result result = SendToWindow("Path of Exile", Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
 
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
-Same example, but with utf-16 text.
+Sometimes window can make on time with prepare for receiving messages. 
+If some messages from begin missing, add Wait(100) before first action message. 
+If some messages from end missing, add Wait(100) after last action message.
+The argument (in milliseconds) for Wait might be needed bigger or lesser, depends on situation. 
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow(UTF16(), L"Path of Exile", { Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN) });
+Result result = SendToWindow("Path of Exile", Wait(100), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
+
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
+```
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow("Path of Exile", Key(VK_RETURN), Text("/kills"), Key(VK_RETURN), Wait(100));
+
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
+```
+
+With utf-16 text.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow(UTF16(), L"Path of Exile", Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN));
+
+if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+```
+
+With partially utf-16 text. Only "/kills" message is sent as utf-16.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow(UTF16(), "Path of Exile", Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN), Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN));
+
+if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+```
+
+With actions sended as a table.
+```c++
+using namespace CWKSS;
+
+const Action actions[] = {
+    Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)
+};
+Result result = SendToWindow("Path of Exile", actions);
+
+if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+```
+
+With actions sended directly as a table.
+```c++
+using namespace CWKSS;
+
+Result result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+
+if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+```
+
+With actions sended as pointer to dynamicaly allocated table, and size.
+```c++
+using namespace CWKSS;
+
+Action* actions = new Action[3];
+actions[0] = Key(VK_RETURN);
+actions[1] = Text("/kills");
+actions[2] = Key(VK_RETURN);
+
+Result result = SendToWindow("Path of Exile", actions, 3);
+
+delete[] actions;
 
 if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
 ```
@@ -40,7 +105,7 @@ Action `Delay(10)` makes sure that after each message posting, program waits for
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", { ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+Result result = SendToWindow("Path of Exile", ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
 
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
@@ -51,7 +116,7 @@ This action needs to wait some amount of time after sending message to make sure
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", { Input({ Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) }), Wait(100)});
+Result result = SendToWindow("Path of Exile", Input(Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)), Wait(100));
 
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
@@ -62,7 +127,7 @@ Sends text messages to empty notepad window, with delay after each message is po
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Untitled - Notepad", { ModePost(), Delay(10), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN) });
+Result result = SendToWindow("Untitled - Notepad", ModePost(), Delay(10), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN));
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
@@ -72,7 +137,7 @@ Sends text messages to empty notepad window, in one input, with waiting for 100 
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("*Untitled - Notepad", { Input({ Key(VK_RETURN), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN) }), Wait(100) });
+Result result = SendToWindow("*Untitled - Notepad", Input(Key(VK_RETURN), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN)), Wait(100));
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 

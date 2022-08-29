@@ -49,16 +49,22 @@ namespace CrossWindowKeyStrokeSender {
 // Macros
 //==============================================================================
 
+
+
 #if defined(_DEBUG)
 #define dbg_cwkss_print_int(val) { printf(#val"=%d\n", int(val)); fflush(stdout); } (void)0
 #define dbg_cwkss_print_i64(val) { printf(#val"=%lld\n", (long long)(val)); fflush(stdout); } (void)0
 #define dbg_cwkss_print_u64(val) { printf(#val"=%ulld\n", (long long unsigned)(val)); fflush(stdout); } (void)0
+#define dbg_cwkss_print_ptr(val) { printf(#val"=%08X\n", reinterpret_cast<unsigned>(val)); fflush(stdout); } (void)0
+#define dbg_cwkss_print_ptr64(val) { printf(#val"=%016llX\n", reinterpret_cast<long long unsigned>(val)); fflush(stdout); } (void)0
 #define dbg_cwkss_tprintf tprintf
 #define dbg_cwkss_printf printf
 #else
 #define dbg_cwkss_print_int(val)
 #define dbg_cwkss_print_i64(val)
 #define dbg_cwkss_print_u64(val)
+#define dbg_cwkss_print_ptr(val) 
+#define dbg_cwkss_print_ptr64(val) 
 #define dbg_cwkss_tprintf(...)
 #define dbg_cwkss_printf(...)
 #endif
@@ -380,9 +386,24 @@ public:
     InputMessage()  : m_action({}) {}
 
     // Makes input messages. All Text actions are converted to messages in utf-16 format.
-    // @actions         Only Key and Text actions are processed. Other are ignorored.
+    // @actions         Array of actions. Only Key and Text actions are processed. Other are ignorored.
     template <unsigned COUNT>
     explicit InputMessage(const Action (&actions)[COUNT]) : m_action({}) {
+        Initalize(actions);
+    }
+
+    // Makes input messages. All Text actions are converted to messages in utf-16 format.
+    // @actions         Array of actions. Only Key and Text actions are processed. Other are ignorored.
+    template <typename... Actions>
+    InputMessage(Actions&&... actions) : m_action({}) {
+        Initalize({ std::forward<Actions>(actions)... });
+    }
+
+    operator Action() const { return m_action; }
+
+private:
+    template <unsigned COUNT>
+    void Initalize(const Action (&actions)[COUNT]) {
         m_action.type_id = ActionTypeID::INPUT;
 
         //m_action.inputs.reserve(COUNT * 2);
@@ -399,9 +420,6 @@ public:
         }
     }
 
-    operator Action() const { return m_action; }
-
-private:
     static void MakeKeyInput(std::vector<INPUT>& inputs, int vk_code, int key_action) {
         if (key_action & KeyAction::DOWN) {
             INPUT input = {};
@@ -599,13 +617,21 @@ inline void PreInitializeWaitForMS() {
 //                                          Input({action, ...})          - Sends messages in one input. Accepts only Key and Text actions. Sends messages in utf-16 encoding format only.
 // @param count                         Number of actions.                                              [function variation]
 Result SendToWindow(HWND target_window, const Action* actions, unsigned count);
+
 Result SendToWindow(const std::wstring& target_window_name, const Action* actions, unsigned count);
 Result SendToWindow(const std::string& target_window_name, const Action* actions, unsigned count);
+
 template <unsigned COUNT>
 Result SendToWindow(const std::wstring& target_window_name, const Action (&actions)[COUNT]);
 template <unsigned COUNT>
 Result SendToWindow(const std::string& target_window_name, const Action (&actions)[COUNT]);
 
+template <typename... Actions>
+Result SendToWindow(const std::wstring& target_window_name, Action&& action, Actions&&... actions);
+template <typename... Actions>
+Result SendToWindow(const std::string& target_window_name, Action&& action, Actions&&... actions);
+
+//==============================================================================
 
 inline void PostKey(HWND window, MessageEncodingID message_encoding_id, const Action& message, Result& result) {
     dbg_cwkss_printf("PostKey\n");
@@ -704,11 +730,11 @@ inline void SendText(HWND window, MessageEncodingID message_encoding_id, const A
 inline void SendInput(const Action& action, Result& result) {
     dbg_cwkss_printf("SendInput\n");
 
-    std::vector<INPUT> inputs = action.inputs; // Unfortunately SendInput accepts non constant pointer only.
+    std::vector<INPUT> inputs = action.inputs; // Unfortunately SendInput accepts a non constant pointer only.
 
     dbg_cwkss_print_int(inputs.size());
 
-    UINT count = SendInput(inputs.size(), &(inputs[0]), sizeof(INPUT));
+    UINT count = SendInput((UINT)inputs.size(), &(inputs[0]), sizeof(INPUT));
 
     if (count < inputs.size()) {
         result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not send input message.", true);
@@ -781,9 +807,12 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 
     if (!is_success) return Result(ErrorID::CAN_NOT_SET_TARGET_WINDOW_AS_FOREGROUND, "Can not set target widnow as foreground window.", true);
 
+    // Note: Should be hardoced, use Wait action instead.
+    // WaitForMS(100); // Reduces situation of: when window is not ready on time to receive messages.
+
     HWND focus_window = GetFocus();
 
-    dbg_cwkss_print_int(focus_window);
+    dbg_cwkss_print_ptr64(focus_window);
 
     if (!focus_window) return Result(ErrorID::CAN_NOT_GET_WINDOW_WITH_KEYBOARD_FOCUS, "Can not get window with keyboard focus.", true);
 
@@ -803,7 +832,7 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 inline Result SendToWindow(HWND target_window, const Action* actions, unsigned count) {
     HWND foreground_window = GetForegroundWindow();
 
-    dbg_cwkss_print_int(foreground_window);
+    dbg_cwkss_print_ptr64(foreground_window);
 
     if (!foreground_window) return Result(ErrorID::CAN_NOT_FIND_FOREGROUND_WINDOW, "Can not find foreground window.", true);
 
@@ -847,7 +876,7 @@ inline Result SendToWindow(HWND target_window, const Action* actions, unsigned c
 inline Result SendToWindow(const std::wstring& target_window_name, const Action* actions, unsigned count) {
     HWND target_window = FindWindowW(NULL, target_window_name.c_str());
 
-    dbg_cwkss_print_int(target_window);
+    dbg_cwkss_print_ptr64(target_window);
     
     if (!target_window) return Result(ErrorID::CAN_NOT_FIND_TARGET_WINDOW, "Can not find target window.", true);
 
@@ -857,7 +886,7 @@ inline Result SendToWindow(const std::wstring& target_window_name, const Action*
 inline Result SendToWindow(const std::string& target_window_name, const Action* actions, unsigned count) {
     HWND target_window = FindWindowA(NULL, target_window_name.c_str());
 
-    dbg_cwkss_print_int(target_window);
+    dbg_cwkss_print_ptr64(target_window);
 
     if (!target_window) return Result(ErrorID::CAN_NOT_FIND_TARGET_WINDOW, "Can not find target window.", true);
 
@@ -872,6 +901,17 @@ Result SendToWindow(const std::wstring& target_window_name, const Action (&actio
 template <unsigned COUNT>
 Result SendToWindow(const std::string& target_window_name, const Action (&actions)[COUNT]) {
     return SendToWindow(target_window_name, (const Action*)actions, COUNT);
+}
+
+// Note: Code 'Action&& action' fixes some call collisions when this function was suposed to be called, but instead SendToWindow(const std::string&, const Action*, count) was prioritized to call.
+template <typename... Actions>
+inline Result SendToWindow(const std::wstring& target_window_name, Action&& action, Actions&&... actions) {
+    return SendToWindow(target_window_name, { std::forward<Action>(action), std::forward<Actions>(actions)... });
+}
+
+template <typename... Actions>
+inline Result SendToWindow(const std::string& target_window_name, Action&& action, Actions&&... actions) {
+    return SendToWindow(target_window_name, { std::forward<Action>(action), std::forward<Actions>(actions)... });
 }
 
 } // namespace CrossWindowKeyStrokeSender

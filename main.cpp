@@ -82,6 +82,11 @@ void RunTests() {
 
     Result result;
 
+    // ---
+#if 0
+    result = SendToWindow("Path of Exile", Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
 
 #if 0
     result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
@@ -89,24 +94,58 @@ void RunTests() {
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+    const Action actions[] = {
+        Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)
+    };
+    result = SendToWindow("Path of Exile", actions);
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { Input({ Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) }), Wait(100)});
+    Action* actions = new Action[3];
+    actions[0] = Key(VK_RETURN);
+    actions[1] = Text("/kills");
+    actions[2] = Key(VK_RETURN);
+
+    result = SendToWindow("Path of Exile", actions, 3);
+
+    delete[] actions;
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("*Untitled - Notepad", { ModePost(), Delay(10), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN) });
+    result = SendToWindow("Path of Exile", ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
 #if 0
-    result = SendToWindow("*Untitled - Notepad", { Input({ Key(VK_RETURN), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN) }), Wait(100) });
+    result = SendToWindow("Path of Exile", ModePost(), Delay(10), Wait(100), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
+
+#if 0
+    result = SendToWindow("Path of Exile", Input(Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)), Wait(100));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+    // ---
+
+#if 0
+    result = SendToWindow("*Untitled - Notepad", Text("Some other text."));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("*Untitled - Notepad", ModePost(), Delay(10), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow("*Untitled - Notepad", Input(Key(VK_RETURN), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN)), Wait(100));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+    // --- SendToWindow junk scenario tests --- //
 
     // TODO: Make a proper Test of sending message where a caller window is the target window.
     // Note: This example does not work.
