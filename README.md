@@ -123,7 +123,7 @@ if (result.IsError()) puts(result.GetErrorMessage().c_str());
 
 
 ### Example 4
-Sends text messages to empty notepad window, with delay after each message is posted.
+Sends text messages to empty notepad window, with delay after each message is posted. With usign `ModePost()`, small delay after each message is needed to give target window time to process message. Value for delay might be needed bigger or smaller.
 ```c++
 using namespace CWKSS;
 
@@ -133,7 +133,7 @@ if (result.IsError()) puts(result.GetErrorMessage().c_str());
 
 
 ### Example 5
-Sends text messages to empty notepad window, in one input, with waiting for 100 milliseconds after input is sent.
+Sends text messages to empty notepad window, in one input, with waiting for 100 milliseconds after input is sent to give target window time to process message. Value for wait might be needed bigger or smaller. 
 ```c++
 using namespace CWKSS;
 
