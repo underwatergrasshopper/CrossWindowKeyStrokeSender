@@ -108,9 +108,8 @@ void RunTests() {
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
-
-
-    // TODO: Test sending message where a caller window is the target window.
+    // TODO: Make a proper Test of sending message where a caller window is the target window.
+    // Note: This example does not work.
 #if 0
     Sleep(1000);
     Message messages[] = { Text("notepad"), Key(VK_RETURN) };

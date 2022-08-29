@@ -246,11 +246,11 @@ struct Action {
     std::vector<INPUT>  inputs;                 // INPUT
 };
 
-class Key {
+class KeyMessage {
 public:
-    Key()  : m_action({}) {}
+    KeyMessage()  : m_action({}) {}
 
-    explicit Key(int vk_code, int key_action = KeyAction::DOWN_AND_UP)  : m_action({}) {
+    explicit KeyMessage(int vk_code, int key_action = KeyAction::DOWN_AND_UP)  : m_action({}) {
         m_action.type_id       = ActionTypeID::KEY;
 
         m_action.vk_code       = vk_code;
@@ -268,12 +268,12 @@ private:
     Action m_action;  
 };
 
-class Text {
+class TextMessage {
 public:
-    Text()  : m_action({}) {}
+    TextMessage()  : m_action({}) {}
 
     // @param text      Unicode text in utf-8 format.
-    explicit Text(const std::string& text)  : m_action({}) {
+    explicit TextMessage(const std::string& text)  : m_action({}) {
         m_action.type_id       = ActionTypeID::TEXT;
 
         m_action.text_utf8     = text;
@@ -281,7 +281,7 @@ public:
     }
 
     // @param text      Unicode text in utf-16 format.
-    explicit Text(const std::wstring& text)  : m_action({}) {
+    explicit TextMessage(const std::wstring& text)  : m_action({}) {
         m_action.type_id       = ActionTypeID::TEXT;
 
         m_action.text_utf8     = UTF16_ToUTF8(text);
@@ -375,14 +375,14 @@ public:
     DeliveryModePost() : DeliveryMode(DeliveryModeID::POST) {}
 };
 
-class Input {
+class InputMessage {
 public:
-    Input()  : m_action({}) {}
+    InputMessage()  : m_action({}) {}
 
     // Makes input messages. All Text actions are converted to messages in utf-16 format.
     // @actions         Only Key and Text actions are processed. Other are ignorored.
     template <unsigned COUNT>
-    explicit Input(const Action (&actions)[COUNT]) : m_action({}) {
+    explicit InputMessage(const Action (&actions)[COUNT]) : m_action({}) {
         m_action.type_id = ActionTypeID::INPUT;
 
         //m_action.inputs.reserve(COUNT * 2);
@@ -459,19 +459,29 @@ private:
     Action m_action;  
 };
 
-class TextInput : public Input {
+class TextInputMessage : public InputMessage {
 public:
-    TextInput() : Input() {}
-    explicit TextInput(const std::string& text)  : Input({Text(text)}) {}
-    explicit TextInput(const std::wstring& text)  : Input({Text(text)}) {}
+    TextInputMessage() : InputMessage() {}
+    explicit TextInputMessage(const std::string& text)  : InputMessage({TextMessage(text)}) {}
+    explicit TextInputMessage(const std::wstring& text)  : InputMessage({TextMessage(text)}) {}
 };
 
+// NOTE: Regarding to: Action class don't have subclasses. 
+// I decided to make SendToWindow function not have array of pointers to Actions classes, because it's adds operator 'new' to each Action object passed as element to array. It's makes the fuction call bloated.
+// And I decided not use the 'object slicing', because it's hard to differ that feature from: if it was intentional or a bug.
+
+
+// Use '#undef CWKSS_NO_SHORT_NAMES' if there is a name collision whit any short name bellow.
 #ifndef CWKSS_NO_SHORT_NAMES
 using Delay     = EachMessageAfterDelay;
 using ASCII     = MessageEncodingASCII;
 using UTF16     = MessageEncodingUTF16;
 using ModeSend  = DeliveryModeSend;
 using ModePost  = DeliveryModePost;
+using Key       = KeyMessage;
+using Text      = TextMessage;
+using Input     = InputMessage;
+using TextInput = TextInputMessage;
 #endif // CWKSS_NO_SHORT
 
 //==============================================================================
