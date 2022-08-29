@@ -114,6 +114,16 @@ void RunTests() {
 #endif
 
 #if 0
+    std::vector<Action> actions;
+    actions.push_back(Key(VK_RETURN));
+    actions.push_back(Text("/kills"));
+    actions.push_back(Key(VK_RETURN));
+
+    result = SendToWindow("Path of Exile", actions.data(), actions.size());
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+#if 0
     result = SendToWindow("Path of Exile", ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif

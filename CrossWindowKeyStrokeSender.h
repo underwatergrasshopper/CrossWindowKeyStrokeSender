@@ -741,7 +741,7 @@ inline void SendInput(const Action& action, Result& result) {
     }
 }
 
-inline Result SendMessages(HWND focus_window, const Action* actions, unsigned count) {
+inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t count) {
     Result result;
 
     unsigned            delay                   = 0;
@@ -750,7 +750,7 @@ inline Result SendMessages(HWND focus_window, const Action* actions, unsigned co
 
     PreInitializeWaitForMS(); 
 
-    for (unsigned ix = 0; ix < count; ix++) {
+    for (uint64_t ix = 0; ix < count; ix++) {
         const Action& action = actions[ix];
 
         switch (action.type_id) {
@@ -800,7 +800,7 @@ inline Result SendMessages(HWND focus_window, const Action* actions, unsigned co
     return result;
 }
 
-inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Action* actions, unsigned count) {
+inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, const Action* actions, uint64_t count) {
     if (IsIconic(target_window)) ShowWindow(target_window, SW_RESTORE);
 
     BOOL is_success = SetForegroundWindow(target_window);
@@ -829,7 +829,7 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 }
 
 
-inline Result SendToWindow(HWND target_window, const Action* actions, unsigned count) {
+inline Result SendToWindow(HWND target_window, const Action* actions, uint64_t count) {
     HWND foreground_window = GetForegroundWindow();
 
     dbg_cwkss_print_ptr64(foreground_window);
@@ -873,7 +873,7 @@ inline Result SendToWindow(HWND target_window, const Action* actions, unsigned c
     return Result();
 }
 
-inline Result SendToWindow(const std::wstring& target_window_name, const Action* actions, unsigned count) {
+inline Result SendToWindow(const std::wstring& target_window_name, const Action* actions, uint64_t count) {
     HWND target_window = FindWindowW(NULL, target_window_name.c_str());
 
     dbg_cwkss_print_ptr64(target_window);
@@ -883,7 +883,7 @@ inline Result SendToWindow(const std::wstring& target_window_name, const Action*
     return SendToWindow(target_window, actions, count);
 }
 
-inline Result SendToWindow(const std::string& target_window_name, const Action* actions, unsigned count) {
+inline Result SendToWindow(const std::string& target_window_name, const Action* actions, uint64_t count) {
     HWND target_window = FindWindowA(NULL, target_window_name.c_str());
 
     dbg_cwkss_print_ptr64(target_window);
