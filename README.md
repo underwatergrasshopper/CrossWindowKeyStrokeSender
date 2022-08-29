@@ -24,9 +24,9 @@ Result result = SendToWindow("Path of Exile", Key(VK_RETURN), Text("/kills"), Ke
 if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
-Sometimes window can make on time with prepare for receiving messages. 
-If some messages from begin missing, add Wait(100) before first action message. 
-If some messages from end missing, add Wait(100) after last action message.
+Sometimes window can't make on time with prepare for receiving messages. 
+If some first messages are missing, add Wait(100) before first action message. 
+If some last messages are missing, add Wait(100) after last action message.
 The argument (in milliseconds) for Wait might be needed bigger or lesser, depends on situation. 
 ```c++
 using namespace CWKSS;
