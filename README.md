@@ -49,7 +49,7 @@ using namespace CWKSS;
 
 Result result = SendToWindow(UTF16(), L"Path of Exile", Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN));
 
-if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+if (result.IsError()) wprintf("%s\n", result.GetErrorMessageUTF16().c_str());
 ```
 
 With partially utf-16 text. Only "/kills" message is sent as utf-16.
@@ -58,7 +58,7 @@ using namespace CWKSS;
 
 Result result = SendToWindow(UTF16(), "Path of Exile", Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN), Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN));
 
-if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
 With actions sended as a table.
@@ -70,7 +70,7 @@ const Action actions[] = {
 };
 Result result = SendToWindow("Path of Exile", actions);
 
-if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
 With actions sended directly as a table.
@@ -79,7 +79,7 @@ using namespace CWKSS;
 
 Result result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
 
-if (result.IsError()) puts(result.GetErrorMessageUTF16().c_str());
+if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
 With actions sended as pointer to dynamicaly allocated table, and size.
