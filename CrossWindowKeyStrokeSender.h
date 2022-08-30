@@ -49,8 +49,6 @@ namespace CrossWindowKeyStrokeSender {
 // Macros
 //==============================================================================
 
-
-
 #if defined(_DEBUG)
 #define dbg_cwkss_print_int(val) { printf(#val"=%d\n", int(val)); fflush(stdout); } (void)0
 #define dbg_cwkss_print_i64(val) { printf(#val"=%lld\n", (long long)(val)); fflush(stdout); } (void)0
@@ -500,7 +498,7 @@ using Key       = KeyMessage;
 using Text      = TextMessage;
 using Input     = InputMessage;
 using TextInput = TextInputMessage;
-#endif // CWKSS_NO_SHORT
+#endif // CWKSS_NO_SHORT_NAMES
 
 //==============================================================================
 // WaitForMS
@@ -599,11 +597,11 @@ inline void PreInitializeWaitForMS() {
 //                                      Name of the window can be in ascii, utf-8 or utf-16 encoding: "Window Name", u8"Window Name", L"Window Name"
 // @param target_window                 Handle to target window. Messages will be sent to this window.  [function variation]
 // @param actions                       Array which contains any combination of following actions:
-//                                          DeliveryModeSend()            - (Default) Function waits until message is delivered before sending another.
-//                                          DeliveryModePos()             - Function does not waits until message is delivered before sending another.
-//                                          MessageEncodingASCII()        - (Default) All key and text messages will be sent as ASCII message (by winapi function with A suffix).
-//                                          MessageEncodingUTF16()        - All key and text messages will be sent as UTF16 message (by winapi function with W suffix).
-//                                          EveryMessageAfterDelay(delay) - All key and text messages will have dalay, in milliseconds, after each send of message.
+//                                          ModeSend()                    - (Default) Function waits until message is delivered before sending another.
+//                                          ModePos()                     - Function does not waits until message is delivered before sending another.
+//                                          ASCII()                       - (Default) All key and text messages will be sent as ASCII message (by winapi function with A suffix).
+//                                          UTF16()                       - All key and text messages will be sent as UTF16 message (by winapi function with W suffix).
+//                                          Delay(delay)                  - All key and text messages will have dalay, in milliseconds, after each send of message.
 //                                                                          Value of delay can not be bigger than MAX_WAIT_TIME.
 //                                          Wait(wait_time)               - No message is send. Program wait for given amount of time.
 //                                                                          Value of wait_time can not be bigger than MAX_WAIT_TIME.
@@ -614,12 +612,13 @@ inline void PreInitializeWaitForMS() {
 //                                          Text(text)                    - Sends text to target target window. 
 //                                                                          Text will be send to element of window which currently have keyboard focus.
 //                                                                          The text can be in ascii, utf-8 or utf-16 encoding: Text("Window Name"), Text(u8"Window Name"), Text(L"Window Name").
-//                                          Input({action, ...})          - Sends messages in one input. Accepts only Key and Text actions. Sends messages in utf-16 encoding format only.
+//                                          Input(action, ...) or Input({action, ...}) - Sends messages in one input. Accepts only Key and Text actions. Sends messages in utf-16 encoding format only.
+//                                      If this short actions names collide with external names, define CWKSS_NO_SHORT_NAMES, and go to CWKSS_NO_SHORT_NAMES to check what are longer names.
 // @param count                         Number of actions.                                              [function variation]
-Result SendToWindow(HWND target_window, const Action* actions, unsigned count);
+Result SendToWindow(HWND target_window, const Action* actions, uint64_t count);
 
-Result SendToWindow(const std::wstring& target_window_name, const Action* actions, unsigned count);
-Result SendToWindow(const std::string& target_window_name, const Action* actions, unsigned count);
+Result SendToWindow(const std::wstring& target_window_name, const Action* actions, uint64_t count);
+Result SendToWindow(const std::string& target_window_name, const Action* actions, uint64_t count);
 
 template <unsigned COUNT>
 Result SendToWindow(const std::wstring& target_window_name, const Action (&actions)[COUNT]);
@@ -903,7 +902,7 @@ Result SendToWindow(const std::string& target_window_name, const Action (&action
     return SendToWindow(target_window_name, (const Action*)actions, COUNT);
 }
 
-// Note: Code 'Action&& action' fixes some call collisions when this function was suposed to be called, but instead SendToWindow(const std::string&, const Action*, count) was prioritized to call.
+// Note: Code 'Action&& action' fixes some call collisions, when this function was supposed to be called, but instead SendToWindow(const std::string&, const Action*, count) is prioritized to call.
 template <typename... Actions>
 inline Result SendToWindow(const std::wstring& target_window_name, Action&& action, Actions&&... actions) {
     return SendToWindow(target_window_name, { std::forward<Action>(action), std::forward<Actions>(actions)... });

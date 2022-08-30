@@ -141,7 +141,7 @@ void RunTests() {
     // ---
 
 #if 0
-    result = SendToWindow("*Untitled - Notepad", Text("Some other text."));
+    result = SendToWindow("*Untitled - Notepad", Wait(100), Text("Some other text."));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
