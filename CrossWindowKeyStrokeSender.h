@@ -601,7 +601,7 @@ inline void PreInitializeWaitForMS() {
 //                                          ModePos()                     - Function does not waits until message is delivered before sending another.
 //                                          ASCII()                       - (Default) All key and text messages will be sent as ASCII message (by winapi function with A suffix).
 //                                          UTF16()                       - All key and text messages will be sent as UTF16 message (by winapi function with W suffix).
-//                                          Delay(delay)                  - All key and text messages will have dalay, in milliseconds, after each send of message.
+//                                          Delay(delay)                  - All key and text messages will have dalay, in milliseconds, after each send of message (message is: Text, Key or Input).
 //                                                                          Value of delay can not be bigger than MAX_WAIT_TIME.
 //                                          Wait(wait_time)               - No message is send. Program wait for given amount of time.
 //                                                                          Value of wait_time can not be bigger than MAX_WAIT_TIME.
@@ -749,6 +749,11 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
 
     PreInitializeWaitForMS(); 
 
+    auto WaitForMS_AndHandleResult = [](Result& result, unsigned delay) {
+        WaitResultID result_id = WaitForMS(delay);
+        if (IsError(result_id)) result = Result(ErrorID::CAN_NOT_WAIT, "Can not wait for specified amount of time after sending message (" + WaitResultID_ToString(result_id) + ").");
+    };
+
     for (uint64_t ix = 0; ix < count; ix++) {
         const Action& action = actions[ix];
 
@@ -759,6 +764,10 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
             case DeliveryModeID::SEND:          SendText(focus_window, message_encoding_id, action, result);   break;
             }
             if (result.IsError()) return result;
+
+            WaitForMS_AndHandleResult(result, delay);
+            if (result.IsError()) return result;
+
             break;
         }
         case ActionTypeID::KEY: {
@@ -767,11 +776,19 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
             case DeliveryModeID::SEND:          SendKey(focus_window, message_encoding_id, action, result);   break;
             }
             if (result.IsError()) return result;
+
+            WaitForMS_AndHandleResult(result, delay);
+            if (result.IsError()) return result;
+
             break;
         }
         case ActionTypeID::INPUT: {
             SendInput(action, result);
             if (result.IsError()) return result;
+
+            WaitForMS_AndHandleResult(result, delay);
+            if (result.IsError()) return result;
+
             break;
         }
         case ActionTypeID::WAIT: {
@@ -792,9 +809,6 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
             break;
         }
         } // switch
-
-        WaitResultID result_id = WaitForMS(delay);
-        if (IsError(result_id))  return Result(ErrorID::CAN_NOT_WAIT, "Can not wait for specified amount of time after sending message (" + WaitResultID_ToString(result_id) + ").");
     }
     return result;
 }
