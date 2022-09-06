@@ -432,7 +432,7 @@ private:
             inputs.push_back(input);
         }
 
-        if (key_action & KeyAction::DOWN) {
+        if (key_action & KeyAction::UP) {
             INPUT input = {};
 
             input.type              = INPUT_KEYBOARD;
