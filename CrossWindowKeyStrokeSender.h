@@ -39,6 +39,7 @@
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
+#include <algorithm>
 #include <utility>
 #include <string>
 #include <vector>
@@ -142,6 +143,28 @@ inline std::string UTF16_ToUTF8(const std::wstring& text) {
         if (buffer != s_buffer) delete[] buffer;
     }
     return text_utf8;
+}
+
+//==============================================================================
+// Other
+//==============================================================================
+
+inline bool IsSpecialVirtualKeyCode(int vk_code) {
+    static constexpr int s_specials[] = {
+        VK_MENU,            // Alt
+        VK_CONTROL,
+        VK_SHIFT,
+
+        VK_LMENU,           // Left Alt
+        VK_LCONTROL,
+        VK_LSHIFT,
+
+        VK_RMENU,           // Right Alt
+        VK_RCONTROL,
+        VK_RSHIFT,
+    };
+
+    return std::find(std::begin(s_specials), std::end(s_specials), vk_code) != std::end(s_specials);
 }
 
 //==============================================================================
@@ -419,14 +442,16 @@ private:
     }
 
     static void MakeKeyInput(std::vector<INPUT>& inputs, int vk_code, int key_action) {
+        UINT scan_code = MapVirtualKeyA(vk_code, MAPVK_VK_TO_VSC);
+
         if (key_action & KeyAction::DOWN) {
             INPUT input = {};
 
             input.type              = INPUT_KEYBOARD;
-            input.ki.wVk            = VK_RETURN;
-            input.ki.wScan          = 0;
+            input.ki.wVk            = 0;
+            input.ki.wScan          = scan_code;
             input.ki.time           = 0;
-            input.ki.dwFlags        = 0;
+            input.ki.dwFlags        = KEYEVENTF_SCANCODE;
             input.ki.dwExtraInfo    = 0;
 
             inputs.push_back(input);
@@ -436,10 +461,10 @@ private:
             INPUT input = {};
 
             input.type              = INPUT_KEYBOARD;
-            input.ki.wVk            = VK_RETURN;
-            input.ki.wScan          = 0;
+            input.ki.wVk            = 0;
+            input.ki.wScan          = scan_code;
             input.ki.time           = 0;
-            input.ki.dwFlags        = KEYEVENTF_KEYUP;
+            input.ki.dwFlags        = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
             input.ki.dwExtraInfo    = 0;
 
             inputs.push_back(input);
@@ -771,6 +796,10 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
             break;
         }
         case ActionTypeID::KEY: {
+            if (IsSpecialVirtualKeyCode(action.vk_code)) {
+                return Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not send key message. Special keys (alt, shift, ctrl) are not supported for SEND and POST delivery method. Use Input() instead.");
+            }
+
             switch (delivery_mode_id) {
             case DeliveryModeID::POST:          PostKey(focus_window, message_encoding_id, action, result);   break;
             case DeliveryModeID::SEND:          SendKey(focus_window, message_encoding_id, action, result);   break;
