@@ -163,27 +163,30 @@ void RunTests() {
 #endif
 
 #if 0
-    result = SendToWindow("*Untitled - Notepad", Input(Key(VK_BACK), Key(VK_BACK)), Wait(100));
-    if (result.IsError()) puts(result.GetErrorMessage().c_str());
-#endif
-
-#if 0
-    // Capital A - will fail
-    result = SendToWindow("*Untitled - Notepad", Wait(100), Key(VK_SHIFT, KeyAction::DOWN), Key('A'), Key(VK_SHIFT, KeyAction::UP), Wait(100));
-    if (result.IsError()) puts(result.GetErrorMessage().c_str());
-#endif
-
-#if 0
     // Capital A 
     result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_SHIFT, KeyAction::DOWN), Key('A'), Key(VK_SHIFT, KeyAction::UP)), Wait(100));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
 #if 0
-    // ś by using GrAlt = Ctrl + Alt
-    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_CONTROL, KeyAction::DOWN), Key(VK_MENU, KeyAction::DOWN), Key('S'), Key(VK_MENU, KeyAction::UP), Key(VK_CONTROL, KeyAction::UP)), Wait(100));
+    // ś 
+    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_RMENU, KeyAction::DOWN), Key('S'), Key(VK_RMENU, KeyAction::UP)), Wait(100));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
+
+#if 0
+    // backspace
+    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_BACK), Key(VK_BACK)), Wait(100));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+
+#if 0
+    result = SendToWindow(L"Simple Window 안녕하세요", Delay(10), Key(VK_LCONTROL), Key(VK_RCONTROL), Key(VK_LSHIFT), Key(VK_RSHIFT));
+    if (result.IsError()) puts(result.GetErrorMessage().c_str());
+#endif
+
+
     // --- SendToWindow junk scenario tests --- //
 
     // TODO: Make a proper Test of sending message where a caller window is the target window.

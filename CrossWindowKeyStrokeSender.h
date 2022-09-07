@@ -167,6 +167,58 @@ inline bool IsSpecialVirtualKeyCode(int vk_code) {
     return std::find(std::begin(s_specials), std::end(s_specials), vk_code) != std::end(s_specials);
 }
 
+inline bool IsAnyAltVirtualKeyCode(int vk_code) {
+    static constexpr int s_specials[] = {
+        VK_MENU,            // Alt
+        VK_LMENU,           // Left Alt
+        VK_RMENU,           // Right Alt
+    };
+
+    return std::find(std::begin(s_specials), std::end(s_specials), vk_code) != std::end(s_specials);
+}
+
+inline bool IsExtVirtualKeyCode(int vk_code) {
+    static constexpr int s_specials[] = {
+        VK_INSERT,
+        VK_DELETE,
+
+        VK_HOME,
+        VK_END,
+        VK_PRIOR,
+        VK_NEXT,
+
+        VK_LEFT,
+        VK_UP,
+        VK_DOWN,
+        VK_RIGHT,
+
+        VK_RMENU,     
+        VK_RCONTROL,
+
+        VK_SNAPSHOT,
+        VK_SCROLL,
+        VK_CANCEL,
+
+        VK_NUMLOCK,
+        VK_DIVIDE,
+        // TODO: 'Numpad Enter' is also an extended key. Does he have virtual key code? Find it!
+    };
+
+    return std::find(std::begin(s_specials), std::end(s_specials), vk_code) != std::end(s_specials);
+}
+
+int VK_CodeToSideless(int vk_code) {
+    switch (vk_code) {
+    case VK_LSHIFT   : return VK_SHIFT;           
+    case VK_RSHIFT   : return VK_SHIFT;           
+    case VK_LCONTROL : return VK_CONTROL;         
+    case VK_RCONTROL : return VK_CONTROL;         
+    case VK_LMENU    : return VK_MENU;            
+    case VK_RMENU    : return VK_MENU;   
+    }
+    return vk_code;
+}
+
 //==============================================================================
 // Result
 //==============================================================================
@@ -280,13 +332,19 @@ public:
     explicit KeyMessage(int vk_code, int key_action = KeyAction::DOWN_AND_UP)  : m_action({}) {
         m_action.type_id       = ActionTypeID::KEY;
 
-        m_action.vk_code       = vk_code;
         m_action.key_action    = key_action;
 
         m_action.scan_code     = MapVirtualKey(vk_code, MAPVK_VK_TO_VSC);
 
         m_action.l_param_down  = 0x00000001 | (m_action.scan_code  << 16);
         m_action.l_param_up    = 0xC0000001 | (m_action.scan_code  << 16);
+
+        if (IsExtVirtualKeyCode(vk_code)) {
+            m_action.l_param_down   |= 1 << 24;
+            m_action.l_param_up     |= 1 << 24;
+        }
+
+        m_action.vk_code       = VK_CodeToSideless(vk_code);
     }
 
     operator Action() const { return m_action; }
@@ -444,6 +502,8 @@ private:
     static void MakeKeyInput(std::vector<INPUT>& inputs, int vk_code, int key_action) {
         UINT scan_code = MapVirtualKeyA(vk_code, MAPVK_VK_TO_VSC);
 
+        DWORD ext_key_flag = IsExtVirtualKeyCode(vk_code) ? KEYEVENTF_EXTENDEDKEY : 0;
+
         if (key_action & KeyAction::DOWN) {
             INPUT input = {};
 
@@ -451,7 +511,7 @@ private:
             input.ki.wVk            = 0;
             input.ki.wScan          = scan_code;
             input.ki.time           = 0;
-            input.ki.dwFlags        = KEYEVENTF_SCANCODE;
+            input.ki.dwFlags        = KEYEVENTF_SCANCODE | ext_key_flag;
             input.ki.dwExtraInfo    = 0;
 
             inputs.push_back(input);
@@ -464,7 +524,7 @@ private:
             input.ki.wVk            = 0;
             input.ki.wScan          = scan_code;
             input.ki.time           = 0;
-            input.ki.dwFlags        = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+            input.ki.dwFlags        = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP | ext_key_flag;
             input.ki.dwExtraInfo    = 0;
 
             inputs.push_back(input);
@@ -796,8 +856,8 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
             break;
         }
         case ActionTypeID::KEY: {
-            if (IsSpecialVirtualKeyCode(action.vk_code)) {
-                return Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not send key message. Special keys (alt, shift, ctrl) are not supported for SEND and POST delivery method. Use Input() instead.");
+            if (IsAnyAltVirtualKeyCode(action.vk_code)) {
+                return Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not send key message. Special keys (alt, left alt, right alt) are not supported for SEND and POST delivery method. Use Input() instead.");
             }
 
             switch (delivery_mode_id) {
