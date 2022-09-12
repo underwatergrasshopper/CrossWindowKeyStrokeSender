@@ -164,13 +164,13 @@ void RunTests() {
 
 #if 0
     // Capital A 
-    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_SHIFT, KeyAction::DOWN), Key('A'), Key(VK_SHIFT, KeyAction::UP)), Wait(100));
+    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_SHIFT, KeyState::DOWN), Key('A'), Key(VK_SHIFT, KeyState::UP)), Wait(100));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
 #if 0
     // ś 
-    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_RMENU, KeyAction::DOWN), Key('S'), Key(VK_RMENU, KeyAction::UP)), Wait(100));
+    result = SendToWindow("*Untitled - Notepad", Wait(100), Input(Key(VK_RMENU, KeyState::DOWN), Key('S'), Key(VK_RMENU, KeyState::UP)), Wait(100));
     if (result.IsError()) puts(result.GetErrorMessage().c_str());
 #endif
 
@@ -284,13 +284,169 @@ void RunTests() {
 #endif
 
 #if 0
-    result = SendToWindow("Path of Exile", { MessageEncodingUTF16(), EachMessageAfterDelay(10), Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP), Text("/kills"), Key(VK_RETURN, KeyAction::DOWN), Key(VK_RETURN, KeyAction::UP) };
+    result = SendToWindow("Path of Exile", { MessageEncodingUTF16(), EachMessageAfterDelay(10), Key(VK_RETURN, KeyState::DOWN), Key(VK_RETURN, KeyState::UP), Text("/kills"), Key(VK_RETURN, KeyState::DOWN), Key(VK_RETURN, KeyState::UP) };
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 #endif
 
 #if 0
     result = SendToWindow("Path of Exile", { MessageEncodingUTF16(), EachMessageAfterDelay(1), Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)  });
     wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+    //--- Description examples ---//
+
+    // Input
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Input(Text("Some Text.\nOther text.\n")),
+        Wait(100));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Input(Text(L"Some Text.\nOther text.ф𤭢")),
+        Wait(100));
+
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Input(
+            Text("Some Text."),
+            Key(VK_RETURN),
+            Text("Other Text."),
+            Key(VK_RETURN)),
+        Wait(100));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Delay(10),
+        Input(Text("Some Text.")),
+        Input(Key(VK_RETURN)),
+        Input(Text("Other Text.")),
+        Input(Key(VK_RETURN)),
+        Wait(100));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Input(
+            Key(VK_RMENU, KeyState::DOWN),
+            Key('S'),
+            Key(VK_RMENU, KeyState::UP)),
+        Wait(100));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Path of Exile", 
+        Input(
+            Key(VK_RETURN),
+            Text("/kills"),
+            Key(VK_RETURN)),
+        Wait(100));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+    // Send
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Text("Some Text.\nOther text.\n"));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        UTF16(),
+        Text(L"Some Text.\nOther text.\nф𤭢\n"));
+
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        Text("Some Text.\n"),
+        Text("Other Text.\n"));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Path of Exile", 
+        Key(VK_RETURN),
+        Text("/kills"),
+        Key(VK_RETURN));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+    // Post
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        ModePost(),
+        Delay(10),
+        Text("Some Text.\nOther text.\n"));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        UTF16(),
+        ModePost(),
+        Delay(10),
+        Text(L"Some Text.\nOther text.\nф𤭢\n"));
+
+    wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Untitled - Notepad", 
+        ModePost(),
+        Delay(10),
+        Text("Some Text.\n"),
+        Text("Other Text.\n"));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
+#endif
+
+#if 0
+    result = SendToWindow(
+        "Path of Exile", 
+        ModePost(),
+        Delay(10),
+        Key(VK_RETURN),
+        Text("/kills"),
+        Key(VK_RETURN));
+
+    printf("%s\n", result.GetErrorMessage().c_str());
 #endif
 
 }

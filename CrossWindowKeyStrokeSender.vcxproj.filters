@@ -18,6 +18,7 @@
   <ItemGroup>
     <None Include="README.md" />
     <None Include="LICENSE" />
+    <None Include="CHANGELOG.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CrossWindowKeyStrokeSender.h">

@@ -82,7 +82,7 @@ enum {
     MAX_WAIT_TIME = 1000 * 60 * 60,    // in milliseconds
 };
 
-enum KeyAction {
+enum KeyState {
     DOWN        = 0x01,
     UP          = 0x02,
     DOWN_AND_UP = DOWN | UP,
@@ -309,7 +309,8 @@ struct Action {
     ActionTypeID        type_id;
 
     int                 vk_code;                // KEY
-    int                 key_action;             // KEY
+    int                 vk_code_sideless;       // KEY
+    int                 key_state;              // KEY
     std::string         text_utf8;              // TEXT
     std::wstring        text_utf16;             // TEXT
 
@@ -329,10 +330,10 @@ class KeyMessage {
 public:
     KeyMessage()  : m_action({}) {}
 
-    explicit KeyMessage(int vk_code, int key_action = KeyAction::DOWN_AND_UP)  : m_action({}) {
+    explicit KeyMessage(int vk_code, int key_state = KeyState::DOWN_AND_UP)  : m_action({}) {
         m_action.type_id       = ActionTypeID::KEY;
 
-        m_action.key_action    = key_action;
+        m_action.key_state    = key_state;
 
         m_action.scan_code     = MapVirtualKey(vk_code, MAPVK_VK_TO_VSC);
 
@@ -344,7 +345,8 @@ public:
             m_action.l_param_up     |= 1 << 24;
         }
 
-        m_action.vk_code       = VK_CodeToSideless(vk_code);
+        m_action.vk_code            = vk_code;
+        m_action.vk_code_sideless   = VK_CodeToSideless(vk_code);
     }
 
     operator Action() const { return m_action; }
@@ -490,7 +492,7 @@ private:
         for (const auto& action : actions) {
             switch (action.type_id) {
             case ActionTypeID::KEY:
-                MakeKeyInput(m_action.inputs, action.vk_code, action.key_action);
+                MakeKeyInput(m_action.inputs, action.vk_code, action.key_state);
                 break;
             case ActionTypeID::TEXT:
                 MakeTextInputUTF16(m_action.inputs, action.text_utf16);
@@ -499,12 +501,12 @@ private:
         }
     }
 
-    static void MakeKeyInput(std::vector<INPUT>& inputs, int vk_code, int key_action) {
+    static void MakeKeyInput(std::vector<INPUT>& inputs, int vk_code, int key_state) {
         UINT scan_code = MapVirtualKeyA(vk_code, MAPVK_VK_TO_VSC);
 
         DWORD ext_key_flag = IsExtVirtualKeyCode(vk_code) ? KEYEVENTF_EXTENDEDKEY : 0;
 
-        if (key_action & KeyAction::DOWN) {
+        if (key_state & KeyState::DOWN) {
             INPUT input = {};
 
             input.type              = INPUT_KEYBOARD;
@@ -517,7 +519,7 @@ private:
             inputs.push_back(input);
         }
 
-        if (key_action & KeyAction::UP) {
+        if (key_state & KeyState::UP) {
             INPUT input = {};
 
             input.type              = INPUT_KEYBOARD;
@@ -684,16 +686,16 @@ inline void PreInitializeWaitForMS() {
 // @param actions                       Array which contains any combination of following actions:
 //                                          ModeSend()                    - (Default) Function waits until message is delivered before sending another.
 //                                          ModePos()                     - Function does not waits until message is delivered before sending another.
-//                                          ASCII()                       - (Default) All key and text messages will be sent as ASCII message (by winapi function with A suffix).
-//                                          UTF16()                       - All key and text messages will be sent as UTF16 message (by winapi function with W suffix).
+//                                          ASCII()                       - All key and text messages will be sent as ASCII message (by winapi function with A suffix).
+//                                          UTF16()                       - (Default) All key and text messages will be sent as UTF16 message (by winapi function with W suffix).
 //                                          Delay(delay)                  - All key and text messages will have dalay, in milliseconds, after each send of message (message is: Text, Key or Input).
 //                                                                          Value of delay can not be bigger than MAX_WAIT_TIME.
 //                                          Wait(wait_time)               - No message is send. Program wait for given amount of time.
 //                                                                          Value of wait_time can not be bigger than MAX_WAIT_TIME.
 //                                          Key(vk_code)                  - Sends key down message and key down message (as Virtual Key Code) to target window.
-//                                          Key(vk_code, key_action)      - Sends key message (as Virtual Key Code) to target window.
+//                                          Key(vk_code, key_state)       - Sends key message (as Virtual Key Code) to target window.
 //                                                                          vk_code:      VK_RETURN, VK_...
-//                                                                          key_action:   KeyAction::DOWN, KeyAction::UP, eyAction::DOWN_AND_UP
+//                                                                          key_state:   KeyState::DOWN, KeyState::UP, eyAction::DOWN_AND_UP
 //                                          Text(text)                    - Sends text to target target window. 
 //                                                                          Text will be send to element of window which currently have keyboard focus.
 //                                                                          The text can be in ascii, utf-8 or utf-16 encoding: Text("Window Name"), Text(u8"Window Name"), Text(L"Window Name").
@@ -710,6 +712,9 @@ Result SendToWindow(const std::wstring& target_window_name, const Action (&actio
 template <unsigned COUNT>
 Result SendToWindow(const std::string& target_window_name, const Action (&actions)[COUNT]);
 
+Result SendToWindow(const std::wstring& target_window_name, Action&& action);
+Result SendToWindow(const std::string& target_window_name, Action&& action);
+
 template <typename... Actions>
 Result SendToWindow(const std::wstring& target_window_name, Action&& action, Actions&&... actions);
 template <typename... Actions>
@@ -722,29 +727,29 @@ inline void PostKey(HWND window, MessageEncodingID message_encoding_id, const Ac
     dbg_cwkss_print_int(message_encoding_id);
 
     if (message_encoding_id == MessageEncodingID::ASCII) {
-        if (message.key_action & KeyAction::DOWN) {
-            if (!PostMessageA(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
+        if (message.key_state & KeyState::DOWN) {
+            if (!PostMessageA(window, WM_KEYDOWN, message.vk_code_sideless, message.l_param_down)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
                 return;
             }
         }
 
-        if (message.key_action & KeyAction::UP) {
-            if (!PostMessageA(window, WM_KEYUP, message.vk_code, message.l_param_up)) {
+        if (message.key_state & KeyState::UP) {
+            if (!PostMessageA(window, WM_KEYUP, message.vk_code_sideless, message.l_param_up)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key up message.", true);
                 return;
             }
         }
     } else {
-        if (message.key_action & KeyAction::DOWN) {
-            if (!PostMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down)) {
+        if (message.key_state & KeyState::DOWN) {
+            if (!PostMessageW(window, WM_KEYDOWN, message.vk_code_sideless, message.l_param_down)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key down message.", true);
                 return;
             }
         }
 
-        if (message.key_action & KeyAction::UP) {
-            if (!PostMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up)) {
+        if (message.key_state & KeyState::UP) {
+            if (!PostMessageW(window, WM_KEYUP, message.vk_code_sideless, message.l_param_up)) {
                 result = Result(ErrorID::CAN_NOT_SEND_MESSAGE, "Can not post key up message.", true);
                 return;
             }
@@ -757,20 +762,20 @@ inline void SendKey(HWND window, MessageEncodingID message_encoding_id, const Ac
     dbg_cwkss_print_int(message_encoding_id);
 
     if (message_encoding_id == MessageEncodingID::ASCII) {
-        if (message.key_action & KeyAction::DOWN) {
-            SendMessageA(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
+        if (message.key_state & KeyState::DOWN) {
+            SendMessageA(window, WM_KEYDOWN, message.vk_code_sideless, message.l_param_down);
         }
 
-        if (message.key_action & KeyAction::UP) {
-            SendMessageA(window, WM_KEYUP, message.vk_code, message.l_param_up);
+        if (message.key_state & KeyState::UP) {
+            SendMessageA(window, WM_KEYUP, message.vk_code_sideless, message.l_param_up);
         }
     } else {
-        if (message.key_action & KeyAction::DOWN) {
-            SendMessageW(window, WM_KEYDOWN, message.vk_code, message.l_param_down);
+        if (message.key_state & KeyState::DOWN) {
+            SendMessageW(window, WM_KEYDOWN, message.vk_code_sideless, message.l_param_down);
         }
 
-        if (message.key_action & KeyAction::UP) {
-            SendMessageW(window, WM_KEYUP, message.vk_code, message.l_param_up);
+        if (message.key_state & KeyState::UP) {
+            SendMessageW(window, WM_KEYUP, message.vk_code_sideless, message.l_param_up);
         }
     }
 }
@@ -829,7 +834,7 @@ inline Result SendMessages(HWND focus_window, const Action* actions, uint64_t co
     Result result;
 
     unsigned            delay                   = 0;
-    MessageEncodingID   message_encoding_id     = MessageEncodingID::ASCII;
+    MessageEncodingID   message_encoding_id     = MessageEncodingID::UTF16;
     DeliveryModeID      delivery_mode_id        = DeliveryModeID::SEND;
 
     PreInitializeWaitForMS(); 
@@ -909,7 +914,7 @@ inline Result FocusAndSendMessages(HWND target_window, HWND foreground_window, c
 
     if (!is_success) return Result(ErrorID::CAN_NOT_SET_TARGET_WINDOW_AS_FOREGROUND, "Can not set target widnow as foreground window.", true);
 
-    // Note: Should be hardoced, use Wait action instead.
+    // Note: Should be hardcoded, use Wait action instead.
     // WaitForMS(100); // Reduces situation of: when window is not ready on time to receive messages.
 
     HWND focus_window = GetFocus();
@@ -1006,6 +1011,14 @@ Result SendToWindow(const std::string& target_window_name, const Action (&action
 }
 
 // Note: Code 'Action&& action' fixes some call collisions, when this function was supposed to be called, but instead SendToWindow(const std::string&, const Action*, count) is prioritized to call.
+inline Result SendToWindow(const std::wstring& target_window_name, Action&& action) {
+    return SendToWindow<1>(target_window_name, { std::forward<Action>(action) });
+}
+
+inline Result SendToWindow(const std::string& target_window_name, Action&& action) {
+    return SendToWindow<1>(target_window_name, { std::forward<Action>(action) });
+}
+
 template <typename... Actions>
 inline Result SendToWindow(const std::wstring& target_window_name, Action&& action, Actions&&... actions) {
     return SendToWindow(target_window_name, { std::forward<Action>(action), std::forward<Actions>(actions)... });

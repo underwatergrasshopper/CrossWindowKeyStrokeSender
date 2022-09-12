@@ -1,156 +1,243 @@
-# CrossWindowKeyStrokeSender
+﻿# CrossWindowKeyStrokeSender
 Simple library for sending keyboard messages to window application from other window application or console application.
 
 To be able use library, copy `CrossWindowKeyStrokeSender.h` file to project source folder.
 
-It's designed for short messages, which have no more than 1000 character, like sending some chat command to a video game.
-Supported encoding formats for messages by this library: ascii, utf-8 and utf-16.
-If sent message seems to be crangled when arrives to target window, try using bigger value in `Delay(delay)` in `SendToWindow` function.
+It's designed for sending short messages, which have no more than 1000 character. For example, like some chat command to a video game or command to other aplication window to load genereated script.
+Supported encoding formats for messages by this library: ascii, utf-16.
+If sent message seems to be crangled when arrives to target window, try using bigger value in `Delay(time_in_milliseconds)` or `Wait(time_in_milliseconds)` in `SendToWindow` function.
+
+*Note: Setting correct amount of time in `Delay` action and `Wait` action depends on: size of messages, speed of processor, reactability of target windwo.*
 
 ## Build Info
 - Compiled on: Visual Studio 2022
 - Target paltform: Windows 7/8/10 (32bit and 64bit)
 - Language: C++11
 
-## Usage Examples
+# Message Delivery Method
+Library use three message delivery methods: Input, Send, Post
 
-### Example 1
-Sends `/kills` command to "Path of Exile"'s game window, by using delivery mode: `ModeSend()`, which is default. Might be slow, but it is most reliable method.
+## Input Delivery Method
+Input delivery method simulates keyboard input messages. Messages are delivared as they would be pressed on keyboard. 
+After sending input message, a wait time (`Wait(time_in_milliseconds)`) is required to be relatively sure if message is processed by target window.
+If multiple input messages are send, setting delay time (`Delay(time_in_milliseconds)`) is required. 
+Delay makes `SendToWindow` function to wait a given amount of time after sending each input message, to relatively prevent collision of processing input messages.
+Function `SendToWindow` must be called from main thread of application.
+Using this method is most recomended.
+
+### Input Example 1
+Sends text message to Notepad window as single text message.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Input(Text("Some Text.\nOther text.\n")),
+    Wait(100));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-Sometimes window can't make on time with prepare for receiving messages. 
-If some first messages are missing, add Wait(100) before first action message. 
-If some last messages are missing, add Wait(100) after last action message.
-The argument (in milliseconds) for Wait might be needed bigger or lesser, depends on situation. 
+### Input Example 2
+Sends text message in utf-16 encoding format to Notepad window as single text message.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", Wait(100), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Input(Text(L"Some Text.\nOther text.\nф𤭢\n")),
+    Wait(100));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 ```
+
+### Input Example 3
+Sends text message to Notepad window as single input of multiple messages.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", Key(VK_RETURN), Text("/kills"), Key(VK_RETURN), Wait(100));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Input(
+        Text("Some Text."),
+        Key(VK_RETURN),
+        Text("Other Text."),
+        Key(VK_RETURN)),
+    Wait(100));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-With utf-16 text.
+### Input Example 4
+Sends text message to Notepad window as multiple inputs of single messages.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow(UTF16(), L"Path of Exile", Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Delay(10),
+    Input(Text("Some Text.")),
+    Input(Key(VK_RETURN)),
+    Input(Text("Other Text.")),
+    Input(Key(VK_RETURN)),
+    Wait(100));
 
-if (result.IsError()) wprintf("%s\n", result.GetErrorMessageUTF16().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-With partially utf-16 text. Only "/kills" message is sent as utf-16.
+### Input Example 5
+Sends `ś` character to Notepad window by using key sequance.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow(UTF16(), "Path of Exile", Key(VK_RETURN), Text(L"/kills"), Key(VK_RETURN), Key(VK_RETURN), Text("/atlaspassives"), Key(VK_RETURN));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Input(
+        Key(VK_RMENU, KeyState::DOWN),
+        Key('S'),
+        Key(VK_RMENU, KeyState::UP)),
+    Wait(100));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-With actions delivered as a table.
+### Input Example 6
+Sends `/kills` command to "Path of Exile" game window.
 ```c++
 using namespace CWKSS;
 
-const Action actions[] = {
-    Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)
-};
-Result result = SendToWindow("Path of Exile", actions);
+result = SendToWindow(
+    "Path of Exile", 
+    Input(
+        Key(VK_RETURN),
+        Text("/kills"),
+        Key(VK_RETURN)),
+    Wait(100));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-With actions delivered directly as a table.
+## Send Delivery Method
+Allows to send key messages and text messages to target window. For each message sent, `SendToWindow` function waits until message is processed by target window.
+Sending messages might take some time.
+Function `SendToWindow` must be called from main thread of application.
+
+
+### Send Example 1
+Sends text message to Notepad window as single text message.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", { Key(VK_RETURN), Text("/kills"), Key(VK_RETURN) });
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Text("Some Text.\nOther text.\n"));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-With actions delivered as directly as a std::vector.
+### Send Example 2
+Sends text message in utf-16 encoding format to Notepad window as single message.
 ```c++
 using namespace CWKSS;
 
-std::vector<Action> actions;
-actions.push_back(Key(VK_RETURN));
-actions.push_back(Text("/kills"));
-actions.push_back(Key(VK_RETURN));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    UTF16(),
+    Text(L"Some Text.\nOther text.\nф𤭢\n"));
 
-Result result = SendToWindow("Path of Exile", actions.data(), actions.size());
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 ```
 
-With actions delivered as pointer to dynamicaly allocated table, and size.
+### Send Example 3
+Sends text message to Notepad window as multiple messages.
 ```c++
 using namespace CWKSS;
 
-Action* actions = new Action[3];
-actions[0] = Key(VK_RETURN);
-actions[1] = Text("/kills");
-actions[2] = Key(VK_RETURN);
+result = SendToWindow(
+    "Untitled - Notepad", 
+    Text("Some Text.\n"),
+    Text("Other Text.\n"));
 
-Result result = SendToWindow("Path of Exile", actions, 3);
+printf("%s\n", result.GetErrorMessage().c_str());
 
-delete[] actions;
-
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
 ```
 
-### Example 2
-Sends `/kills` command to "Path of Exile"'s game window, by using delivery mode: `ModePos()`. 
-Much faster, but after each message program needs to wait some small amount of time to make sure that posted message is completed, otherwise sent messages might end being crangled.
-Action `Delay(10)` makes sure that after each message posting, program waits for 10 milliseconds.
+### Send Example 4
+Sends `/kills` command to "Path of Exile" game window.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", ModePost(), Delay(10), Key(VK_RETURN), Text("/kills"), Key(VK_RETURN));
+result = SendToWindow(
+    "Path of Exile", 
+    Key(VK_RETURN),
+    Text("/kills"),
+    Key(VK_RETURN));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-### Example 3
-Sends `/kills` command to "Path of Exile"'s game window, by using action: `Input({action, ...})`. In this mode all key and text messages are sent as if they were pressed manually.
-This action needs to wait some amount of time after sending message to make sure, everything were processed. All text messages are always sent in utf-16 encoding format.
+## Post Delivery Method
+Allows to send key messages and text messages to target window. Messages are sent to target window message queue before they are processed.
+Setting delay time (`Delay(time_in_milliseconds)`) is required. Delay makes `SendToWindow` function to wait given amount of time after sending each message, to relatively prevent collision of processing messages.
+Function `SendToWindow` not necessary needs to be called from main thread of application.
+
+### Post Example 1
+Sends text message to Notepad window as single text message.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Path of Exile", Input(Key(VK_RETURN), Text("/kills"), Key(VK_RETURN)), Wait(100));
+result = SendToWindow(
+    "Untitled - Notepad", 
+    ModePost(),
+    Delay(10),
+    Text("Some Text.\nOther text.\n"));
 
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+printf("%s\n", result.GetErrorMessage().c_str());
 ```
 
-
-### Example 4
-Sends text messages to empty notepad window, with delay after each message is posted. With usign `ModePost()`, small delay after each message is needed to give target window time to process message. Value for delay might be needed bigger or smaller.
+### Post Example 2
+Sends text message in utf-16 encoding format to Notepad window as single message.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("Untitled - Notepad", ModePost(), Delay(10), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN));
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+result = SendToWindow(
+    "Untitled - Notepad", 
+    UTF16(),
+    ModePost(),
+    Delay(10),
+    Text(L"Some Text.\nOther text.\nф𤭢\n"));
+
+wprintf(L"%s\n", result.GetErrorMessageUTF16().c_str());
 ```
 
-
-### Example 5
-Sends text messages to empty notepad window, in one input, with waiting for 100 milliseconds after input is sent to give target window time to process message. Value for wait might be needed bigger or smaller. 
+### Post Example 3
+Sends text message to Notepad window as multiple messages.
 ```c++
 using namespace CWKSS;
 
-Result result = SendToWindow("*Untitled - Notepad", Input(Key(VK_RETURN), Text("Some text."), Key(VK_RETURN), Text("Some other text."), Key(VK_RETURN)), Wait(100));
-if (result.IsError()) puts(result.GetErrorMessage().c_str());
+result = SendToWindow(
+    "Untitled - Notepad", 
+    ModePost(),
+    Delay(10),
+    Text("Some Text.\n"),
+    Text("Other Text.\n"));
+
+printf("%s\n", result.GetErrorMessage().c_str());
+
 ```
 
+### Post Example 4
+Sends `/kills` command to "Path of Exile" game window.
+```c++
+using namespace CWKSS;
+
+result = SendToWindow(
+    "Path of Exile", 
+    ModePost(),
+    Delay(10),
+    Key(VK_RETURN),
+    Text("/kills"),
+    Key(VK_RETURN));
+
+printf("%s\n", result.GetErrorMessage().c_str());
+```
