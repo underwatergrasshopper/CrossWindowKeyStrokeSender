@@ -351,3 +351,6 @@ MigrationBackup/
 
 # SVN
 .svn/
+
+# Distribution
+dist/
