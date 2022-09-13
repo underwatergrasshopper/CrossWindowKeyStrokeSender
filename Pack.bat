@@ -29,7 +29,7 @@ where /q 7z.exe || echo Pack Error: Can not find 7z.exe. && exit /b
 set VERSION=0.1.2
 set NAME=CrossWindowKeyStrokeSender
 set NAME_VERSION=%NAME%-%VERSION%
-set FILES=CrossWindowKeyStrokeSender.h README.md CHANGELOG.md
+set FILES=CrossWindowKeyStrokeSender.h README.md CHANGELOG.md LICENSE
 
 if not exist "dist" mkdir "dist"
 
