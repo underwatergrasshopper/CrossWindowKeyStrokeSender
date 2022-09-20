@@ -38,6 +38,19 @@ void RunTests() {
     assert(UTF16_ToUTF8(L"śćń") == u8"śćń");
     assert(UTF8_ToUTF16(u8"śćń") == L"śćń");
 
+    enum { DOUBLE_TIMES = 10 };
+
+    std::string long_text_utf8      = u8"śćńśćńśćńśćńśćńśćńśćńśćń";
+    std::wstring long_text_utf16    = L"śćńśćńśćńśćńśćńśćńśćńśćń";
+
+    for (unsigned ix = 0; ix < DOUBLE_TIMES; ++ix) {
+        long_text_utf8  += long_text_utf8;
+        long_text_utf16 += long_text_utf16;
+    }
+
+    assert(UTF8_ToUTF16(long_text_utf8) == long_text_utf16);
+    assert(UTF16_ToUTF8(long_text_utf16) == long_text_utf8);
+
     // --- Result tests --- //
     assert(Result(ErrorID::NONE, "abc", false).GetErrorMessage() == "CWKSS Error: abc");
     assert(Result(ErrorID::NONE, "abc", false).GetErrorMessageUTF16() == L"CWKSS Error: abc");
@@ -453,5 +466,6 @@ void RunTests() {
 
 int main() {
     RunTests();
+    puts("--- END of TESTS ---");
     return 0;
 }

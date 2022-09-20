@@ -104,15 +104,25 @@ enum class DeliveryModeID {
 inline std::wstring UTF8_ToUTF16(const std::string& text) {
     std::wstring text_utf16;
 
-    enum { COUNT = 256 };
+    enum { COUNT = 512 };
     static wchar_t s_buffer[COUNT] = {};
 
-    wchar_t* buffer = nullptr;
+    if (!text.empty()) {
 
-    if (text.length()) {
         const int count = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
 
-        buffer = (count > COUNT) ? (new wchar_t[count]) : s_buffer;
+        if (count == 0) {
+            const int orientation = fwide(stderr, 0);
+            if (orientation > 0) {
+                fwprintf(stdout, L"%ls\n", L"CWKSS UTF8_ToUTF16 Error: Can not convert text from utf-8 to utf-16.");
+            } else {
+                fprintf(stdout, "%s\n", "CWKSS UTF8_ToUTF16 Error: Can not convert text from utf-8 to utf-16.");
+            }
+            fflush(stdout);
+            exit(EXIT_FAILURE);
+        }
+
+        wchar_t* buffer = (count > COUNT) ? (new wchar_t[count]) : s_buffer;
 
         if (MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, buffer, count)) {
             text_utf16 = std::wstring(buffer);
@@ -126,15 +136,24 @@ inline std::wstring UTF8_ToUTF16(const std::string& text) {
 inline std::string UTF16_ToUTF8(const std::wstring& text) {
     std::string text_utf8;
 
-    enum { COUNT = 256 };
+    enum { COUNT = 512 };
     static char s_buffer[COUNT] = {};
-
-    char* buffer = nullptr;
 
     if (text.length()) {
         const int count = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, NULL, 0, NULL, NULL);
 
-        buffer = (count > COUNT) ? (new char[count]) : s_buffer;
+        if (count == 0) {
+            const int orientation = fwide(stderr, 0);
+            if (orientation > 0) {
+                fwprintf(stdout, L"%ls\n", L"CWKSS UTF16_ToUTF8 Error: Can not convert text from utf-16 to utf-8.");
+            } else {
+                fprintf(stdout, "%s\n", "CWKSS UTF16_ToUTF8 Error: Can not convert text from utf-16 to utf-8.");
+            }
+            fflush(stdout);
+            exit(EXIT_FAILURE);
+        }
+
+        char* buffer = (count > COUNT) ? (new char[count]) : s_buffer;
 
         if (WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, buffer, count, NULL, NULL)) {
             text_utf8 = std::string(buffer);
