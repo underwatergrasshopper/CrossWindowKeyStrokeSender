@@ -26,7 +26,7 @@ setlocal EnableDelayedExpansion
 
 where /q 7z.exe || echo Pack Error: Can not find 7z.exe. && exit /b
 
-set VERSION=0.1.2
+set VERSION=0.1.3
 set NAME=CrossWindowKeyStrokeSender
 set NAME_VERSION=%NAME%-%VERSION%
 set FILES=CrossWindowKeyStrokeSender.h README.md CHANGELOG.md LICENSE
