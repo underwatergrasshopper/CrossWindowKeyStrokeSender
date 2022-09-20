@@ -25,7 +25,7 @@
 /**
 * CrossWindowKeyStrokeSender.h
 * @author underwatergrasshopper
-* @version 0.1
+* @version 0.1.3
 */
 
 #ifndef CROSSWINDOWKEYSTROKESENDER_H_
